@@ -4,6 +4,6 @@ go 1.22.3
 
 require (
 	github.com/atotto/clipboard v0.1.4
-	github.com/doptime/dopmap v0.0.0-20240930070838-4d4347ef8faf
+	github.com/cespare/xxhash/v2 v2.3.0
 	golang.org/x/sync v0.8.0
 )
