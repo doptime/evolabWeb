@@ -7,7 +7,7 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/doptime/dopmap/message"
+	"github.com/doptime/evolab/message"
 )
 
 type Model struct {

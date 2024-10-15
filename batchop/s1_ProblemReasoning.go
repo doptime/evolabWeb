@@ -3,7 +3,7 @@ package batchop
 import (
 	"strings"
 
-	"github.com/doptime/dopmap/query"
+	"github.com/doptime/evolab/query"
 )
 
 func ProblemReformulation(node *query.Query) (msg []*query.Query, err error) {
@@ -29,7 +29,7 @@ func ProblemReformulation(node *query.Query) (msg []*query.Query, err error) {
 		prompt.String()+`Your goal is to do the Key Result Identification:
 	- List critical factors Result may be introduced in the problem's solution.`,
 	)
-	err = query.AskLLMParallelly(cs...)
+	err = query.AskLLMParallelly(cs[0])
 	if err != nil {
 		return nil, err
 	}

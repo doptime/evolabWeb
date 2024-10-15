@@ -2,7 +2,7 @@ ConfigUrl = ""
 
 [Http]
   CORES = "*"
-  Port = 80
+  Port = 81
   Path = "/"
   MaxBufferSize = 10485760
   JwtSecret = "DhSQekDq1XctftfH5LnX6V5pmJMTaOOM"
@@ -14,7 +14,7 @@ ConfigUrl = ""
   Password = "mXJLFAt3y47woLF5AkNiKs3ug1D0yWz8"
   Host = "keydb.lan"
   Port = 6379
-  DB = 1
+  DB = 2
 
 [[HttpRPC]]
   Name = "doptime"

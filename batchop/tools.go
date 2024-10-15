@@ -3,8 +3,8 @@ package batchop
 import (
 	"strings"
 
-	"github.com/doptime/dopmap/query"
-	"github.com/doptime/dopmap/tools"
+	"github.com/doptime/evolab/query"
+	"github.com/doptime/evolab/tools"
 
 	"github.com/atotto/clipboard"
 )

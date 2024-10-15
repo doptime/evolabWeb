@@ -3,8 +3,8 @@ package batchop
 import (
 	"fmt"
 
-	"github.com/doptime/dopmap/models"
-	"github.com/doptime/dopmap/query"
+	"github.com/doptime/evolab/models"
+	"github.com/doptime/evolab/query"
 )
 
 func ParallelEvaluator(node ...*query.Query) (err error) {

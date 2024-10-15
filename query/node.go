@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/doptime/dopmap/message"
-	"github.com/doptime/dopmap/models"
+	"github.com/doptime/evolab/message"
+	"github.com/doptime/evolab/models"
 )
 
 type Query struct {

@@ -3,15 +3,16 @@ package main
 import (
 	"time"
 
-	"github.com/doptime/dopmap/batchop"
-	"github.com/doptime/dopmap/models"
-	"github.com/doptime/dopmap/query"
+	"github.com/doptime/doptime/httpserve"
+	"github.com/doptime/evolab/batchop"
+	"github.com/doptime/evolab/models"
+	"github.com/doptime/evolab/query"
 )
 
 // Perform reasoning
 var MCTSTrajectory = &query.Query{
 	Created: time.Now().Unix(),
-	Model:   models.ModelQwen32B.Name,
+	Model:   models.ModelQwen72B.Name,
 	MsgUser: `I have a 9 yrs old daughter, I want's help here with her using a funny | interesting | breath taking | deep-diving | emotion arousing story. 
 Remember, The Most Important thing is building the experience. If can not, Others Fade Away, because she's somehow formidable with her work.
 Learn meters, decimeters, and centimeters through a perceptual way. Encode it in a 6,000-word suspense detective novel.
@@ -22,6 +23,7 @@ Analyze & very impressive visual depict of each clue needed.Third person perspec
 `}
 
 func main() {
+	httpserve.Debug()
 	// err := MCTSTrajectory.Solute()
 	// if err == nil {
 	// 	batchop.CopyToClipboard(MCTSTrajectory)
