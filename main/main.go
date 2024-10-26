@@ -4,7 +4,9 @@ import (
 	"time"
 
 	"github.com/doptime/doptime/httpserve"
+	"github.com/doptime/doptime/libapi"
 	"github.com/doptime/evolab/batchop"
+	"github.com/doptime/evolab/evolab"
 	"github.com/doptime/evolab/models"
 	"github.com/doptime/evolab/query"
 )
@@ -23,7 +25,11 @@ Analyze & very impressive visual depict of each clue needed.Third person perspec
 `}
 
 func main() {
+	//config.LoadToml()
 	httpserve.Debug()
+	libapi.EnableLibapi()
+	evolab.EnableEvoLabe()
+	time.Sleep(100000000 * time.Second)
 	// err := MCTSTrajectory.Solute()
 	// if err == nil {
 	// 	batchop.CopyToClipboard(MCTSTrajectory)

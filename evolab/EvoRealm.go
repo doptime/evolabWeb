@@ -1,15 +1,20 @@
 package evolab
 
-import "github.com/doptime/doptime/db"
+import "github.com/doptime/redisdb"
 
 type EvoRealm struct {
-	Id              string
-	Topic           string
-	Up, Down, Shown int64
-	Created         int64
-	Popularity      float64
+	Id         string
+	Topic      string
+	Up, Down   int64
+	Shown      int64
+	Created    int64 `mod:"unixtime=ms"`
+	Popularity float64
 
-	InquiryIds []string `msgpack:"qp"`
+	QueryIds []string `msgpack:"Queries"`
 }
 
-var KeyEvoRealm = db.HashKey[string, *EvoRealm]()
+var KeyEvoRealm = redisdb.HashKey[string, *EvoRealm](redisdb.WithAsWebData())
+
+func EnableEvoLabe() {
+
+}
