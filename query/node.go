@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/doptime/evolab/functioncalls"
 	"github.com/doptime/evolab/message"
 	"github.com/doptime/evolab/models"
 )
@@ -18,6 +19,7 @@ type Query struct {
 	MsgSys       string
 	MsgUser      string
 	MsgAssistant string
+	Functions    []*functioncalls.FunctionCall
 }
 type QueryList []*Query
 
@@ -51,6 +53,10 @@ func (node *Query) WithMsgAssistant(msg string) (old *Query) {
 }
 func (node *Query) WithModel(model string) *Query {
 	node.Model = model
+	return node
+}
+func (node *Query) WithFunction(funcall *functioncalls.FunctionCall) *Query {
+	node.Functions = append(node.Functions, funcall)
 	return node
 }
 

@@ -3,7 +3,7 @@ package batchop
 import (
 	"github.com/doptime/evolab/models"
 	"github.com/doptime/evolab/query"
-	"github.com/doptime/evolab/tools"
+	"github.com/doptime/evolab/utils"
 )
 
 func generateProblemSolvingPrompt(node *query.Query, formerSolutionGenerated string) (userMsg string) {
@@ -11,7 +11,7 @@ func generateProblemSolvingPrompt(node *query.Query, formerSolutionGenerated str
 	prompt += "Problem Reformulated:\n" + node.MsgUser + "\n\n"
 	if formerSolutionGenerated != "" {
 		s := formerSolutionGenerated
-		if part := tools.ReadMarkdownTagOut(s, "Solution Generated"); part != "" {
+		if part := utils.ReadMarkdownTagOut(s, "Solution Generated"); part != "" {
 			s = part
 		}
 		prompt += "Previous Solution Generated:\n" + s + "\n\n"
