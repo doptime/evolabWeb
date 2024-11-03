@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/doptime/evolab/message"
+	"github.com/doptime/evolab/toolcall"
 )
 
 type Model struct {
@@ -147,6 +148,9 @@ func handleNonStreamResponse(resp *http.Response) (assistantMsg string, err erro
 	}
 
 	if len(response.Choices) > 0 {
+		for _, toolcallstr := range response.Choices[0].Message.ToolCalls {
+			toolcall.HandleResponse(toolcallstr.(string))
+		}
 		return response.Choices[0].Message.Content, nil
 	}
 

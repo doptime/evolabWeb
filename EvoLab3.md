@@ -88,7 +88,7 @@ type ToolAgent struct {
 	Model string		//LLM model name. "Qwen14B" as default
 	Duty  string //what to do
 	Prompt    string //prompt implementation of Duty
-	FunctionCalls []string //function calls
+	ToolCalls []string //function calls
 }
 func (a *ToolAgent) Default() *ToolAgent {
 	a.Id = a.Id | time.Now().UnixNano()

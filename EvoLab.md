@@ -37,7 +37,7 @@ EvoRealm 定义了主题和该主题下的相关问题
 // 信息（Talk）被组织为模块化的结构Talks。并在不同的输出主题（Query）下面被组织为不同的Answer。
 // Files 是模拟器中的Talk的一种。Files 对应计算机上的物理文件。
 type Talk struct {	
-	TalkId string	//case file: f/Path...; case created by user: u/.../nanoid; case others: chars(TalkId) ∈ {alphanumeric}
+	TalkId string	//case file: f/Path...;  case query: q/nanoid...; case others: chars(TalkId) ∈ {alphanumeric}
 	Content string
 	Purpose string //Purpose is used for describe what is expected to realiza of this Talk. used for context pick up
 	SolveState string //SolveState is used for describe the state of the Talk. either ’uncompleted’ ’canBeImproved’ ’FullySolved’
@@ -59,7 +59,7 @@ type ToolAgent struct {
 	WorkingBoundary string //"realm" or "global", "global" is default
 	Model string		//LLM model name. "Qwen14B" as default
 	DutyPrompt    string //prompt implementation of Duty of the ToolAgent
-	FunctionCalls []tools.Tool //langchaingo tool calls
+	ToolCalls []tools.Tool //langchaingo tool calls
 }
 func NewToolAgent(id string,a *ToolAgent) *ToolAgent {
 	a.Id = id
@@ -81,8 +81,10 @@ var EvoLabOS = ToolAgent{
    - 根据诊断结果确定下一步工作意图
    - 选择合适的FunctionTool用于体执行任务
    - 准备必要的上下文信息供FunctionTool使用
-3. 使用工作意图，上下文信息作为参数，调用FunctionTool`,
-	FunctionCalls:[]tools.Tool{functioncalls.TalkGeneratorFunc,functioncalls.TalkModularizerFunc}
+3. 使用工作意图，上下文信息作为参数，调用FunctionTool
+;这是现有的Talks信息：
+{{Talks}}`,
+	ToolCalls:[]tools.Tool{toolcall.TalkGeneratorFunc,toolcall.TalkModularizerFunc}
 }
 
 
@@ -100,7 +102,7 @@ var TalkGenerator = NewToolAgent(
 3. 为每个新生成的 Talk 添加意图描述（Purpose），并描述填写该 Talk 的模块化依赖列表。
 4. 记忆管理: 调用FunctionCalls,维护Talk的持久性存储，供后续的模型响应使用。
 请确保生成的 Talks 有助于解决 Query，并遵循模块化设计原则。`,
-	FunctionCalls:[]tools.Tool{RedisHKeyTalk_HMSet}
+	ToolCalls:[]tools.Tool{RedisHKeyTalk_HMSet}
 }
 
  
@@ -113,5 +115,5 @@ var TalkModularizer = ToolAgent{
 4. **重新评价问题解决状态**：在 Talk.SolveState 中评估问题是否已解决。SolveState 允许的值包括 'uncompleted'、'canBeImproved'、'FullySolved'。
 5. **记忆管理**：调用 FunctionCalls，维护关键上下文的持久性存储。
 请确保所有的调整和更新都有助于更好地回答 Query，并提高系统的整体效率。`,
-	FunctionCalls:[]tools.Tool{RedisHKeyTalk_HMSet}
+	ToolCalls:[]tools.Tool{RedisHKeyTalk_HMSet}
 }

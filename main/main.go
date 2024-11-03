@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/doptime/doptime/httpserve"
@@ -9,6 +10,8 @@ import (
 	"github.com/doptime/evolab/evolab"
 	"github.com/doptime/evolab/models"
 	"github.com/doptime/evolab/query"
+	"github.com/doptime/evolab/toolagents"
+	"github.com/doptime/redisdb"
 )
 
 // Perform reasoning
@@ -25,6 +28,16 @@ Analyze & very impressive visual depict of each clue needed.Third person perspec
 `}
 
 func main() {
+	talk := &toolagents.Talk{
+		TalkId:  "q:" + redisdb.NanoId(8),
+		Content: "如何识别伯努利分布",
+	}
+	err := toolagents.KeyTalk.HSet(talk.TalkId, talk)
+	if err != nil {
+		fmt.Println(err)
+	}
+	toolagents.EvoLabOS.Run(map[string]interface{}{})
+	return
 	//config.LoadToml()
 	httpserve.Debug()
 	libapi.EnableLibapi()

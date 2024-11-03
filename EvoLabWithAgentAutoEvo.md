@@ -99,7 +99,7 @@ type ToolAgent struct {
 	Model string		//LLM model name. "Qwen14B" as default
 	Duty  string //what to do
 	Prompt    string //prompt implementation of Duty
-	FunctionCalls []tools.Tool //langchaingo tool calls
+	ToolCalls []tools.Tool //langchaingo tool calls
 }
 func (a *ToolAgent) Default() *ToolAgent {
 	a.Id = a.Id | time.Now().UnixNano()
@@ -130,7 +130,7 @@ var ToolAgentManager = ToolAgent{
  2. 基于性能的迭代优化: 根据工具评价器的反馈，分析工具性能数据; 识别优化机会,调整工具的逻辑和功能; 提出改进的替代版本 
  3. 基于自组织协调的迭代优化: 优化工具间的协作模式; 调整工具组合策略; 实现工具集的整体进化; `,
 	Prompt:   "manage tools' lifecycle",
-	FunctionCalls:[]tools.Tool{RedisHKeyToolAgents_HSet,RedisHKeyTalk_HDel,RedisHKeyTalk_HMGet}
+	ToolCalls:[]tools.Tool{RedisHKeyToolAgents_HSet,RedisHKeyTalk_HDel,RedisHKeyTalk_HMGet}
 }
 var RedisHKeyToolAgents = redisdb.HashKey["{{unixtime}}" string as field, toolAgent *ToolAgent as value]("ToolAgent")
   
