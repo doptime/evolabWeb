@@ -58,7 +58,7 @@ type ToolAgent struct {
 	WorkingBoundary string //"realm" or "global", "global" is default
 	Model string		//LLM model name. "Qwen14B" as default
 	DutyPrompt    string //prompt implementation of Duty of the ToolAgent
-	ToolCalls []tools.Tool //langchaingo tool calls
+	ToolCalls []tools.Tool 
 }
 func NewToolAgent(id string,a *ToolAgent) *ToolAgent {
 	a.Id = id

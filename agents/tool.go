@@ -6,7 +6,6 @@ import (
 	"reflect"
 
 	openai "github.com/sashabaranov/go-openai"
-	"github.com/tmc/langchaingo/jsonschema"
 )
 
 var FunctionMap = make(map[string]func(string) (ret interface{}, err error))
@@ -38,19 +37,6 @@ type Tool[v any] struct {
 	function func(string) (interface{}, error)
 }
 
-// type FunctionCall interface {
-// 	String() string
-// }
-
-func (t *Tool[v]) String() string {
-	data, err := json.Marshal(t.Function)
-	if err != nil {
-		fmt.Println("Error marshalling tool:", err)
-		return ""
-	}
-	return string(data)
-}
-
 func NewTool[v any](name string, description string, f func(param v) (interface{}, error)) *Tool[v] {
 	// Inspect the function signature
 	funcType := reflect.TypeOf(f)
@@ -67,13 +53,13 @@ func NewTool[v any](name string, description string, f func(param v) (interface{
 	}
 
 	// Map parameter fields to JSON schema definitions
-	params := make(map[string]jsonschema.Definition)
+	params := make(map[string]any)
 	for i := 0; i < paramType.NumField(); i++ {
 		field := paramType.Field(i)
 
-		def := jsonschema.Definition{
-			Type:        mapKindToDataType(field.Type.Kind()),
-			Description: field.Tag.Get("description"),
+		def := map[string]string{
+			"type":        mapKindToDataType(field.Type.Kind()),
+			"description": field.Tag.Get("description"),
 		}
 		params[field.Name] = def
 	}
@@ -99,45 +85,23 @@ func NewTool[v any](name string, description string, f func(param v) (interface{
 	return a
 }
 
-// var FunctionToolsMap = map[string]string{}
-
-// func FunctionTools(toolNames ...string) string {
-// 	functions := make([]string, 0, len(toolNames))
-// 	for _, t := range toolNames {
-// 		functionTool, ok := FunctionToolsMap[t]
-// 		if !ok {
-// 			fmt.Println("error: tool not found in FunctionToolsMap")
-// 			continue
-// 		}
-// 		functions = append(functions, functionTool)
-// 	}
-
-// 	functionsJSON, err := json.Marshal(functions)
-// 	if err != nil {
-// 		fmt.Println("Error marshalling functions:", err)
-// 		return ""
-// 	}
-
-// 	return "```json\n{\n \"fuction_call\": " + string(functionsJSON) + "}```"
-// }
-
-func mapKindToDataType(kind reflect.Kind) jsonschema.DataType {
+func mapKindToDataType(kind reflect.Kind) string {
 	switch kind {
 	case reflect.Struct:
-		return jsonschema.Object
+		return "object"
 	case reflect.Float32, reflect.Float64:
-		return jsonschema.Number
+		return "number"
 	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
-		return jsonschema.Integer
+		return "integer"
 	case reflect.String:
-		return jsonschema.String
+		return "string"
 	case reflect.Slice, reflect.Array:
-		return jsonschema.Array
+		return "array"
 	case reflect.Bool:
-		return jsonschema.Boolean
+		return "boolean"
 	case reflect.Invalid:
-		return jsonschema.Null
+		return "null"
 	default:
-		return jsonschema.String // 默认类型
+		return "string" // 默认类型
 	}
 }
