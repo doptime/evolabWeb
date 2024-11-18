@@ -56,3 +56,17 @@ func ReadMarkdownTagOut(s string, tags ...string) string {
 	}
 	return s
 }
+
+// extractGoal parses the 'Goal: ...' section from the LLM response
+func ExtractStringAfterTag(response string, Tag string) string {
+	// Split the response into lines
+	lines := strings.Split(response, "\n")
+	for _, line := range lines {
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, Tag) {
+			// Return the content after 'Goal:'
+			return strings.TrimPrefix(trimmed, Tag)
+		}
+	}
+	return ""
+}

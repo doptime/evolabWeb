@@ -13,6 +13,7 @@ EvoLab 是一个基于人工智能的"世界模拟器"平台，采用文字作�
 - 讨论小学课程的编排
 - 套如何设计廉价可靠，易于控制的50kg载荷的物流无人机的各个部件
 - 讨论完善开发一个后端开发框架。
+- 制作项目说明文档
 
 
 
@@ -33,15 +34,13 @@ EvoRealm 定义了主题和该主题下的相关问题
 一个EvoRealm 下包含多个Question
 	
 
-### 2.2  主要组件 - AnswerTalks
+### 2.2  主要组件 - Talks
 // 信息（Talk）被组织为模块化的结构Talks。并在不同的输出主题（Query）下面被组织为不同的Answer。
 // Files 是模拟器中的Talk的一种。Files 对应计算机上的物理文件。
-type Talk struct {	
-	TalkId string	//case file: f/Path...;  case query: q/nanoid...; case others: chars(TalkId) ∈ {alphanumeric}
+type Talk struct {		
+	Path string	//path start with /RealmId/...
+	EditAt int64
 	Content string
-	Purpose string //Purpose is used for describe what is expected to realiza of this Talk. used for context pick up
-	SolveState string //SolveState is used for describe the state of the Talk. either ’uncompleted’ ’canBeImproved’ ’FullySolved’
-    Dependencies []string `msgpack:"d"` // 引用的 TalkIds	
 }
 
 //for the talk on the Query,the talkID is "{{EvoRealmId}}:{{InquryId}}" else nanoid(8)

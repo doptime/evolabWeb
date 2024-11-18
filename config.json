@@ -1,0 +1,24 @@
+{
+    "llm": {
+        "baseURL": "http://gpu.lan:8007/v1/chat/completions",
+        "provider": "openai",
+        "model": "Qwen/Qwen2.5-32B-Instruct-AWQ",
+        "api_key": "token-deaf",
+        "temperature": 0.7
+    },
+    "memory": {
+        "enabled": true,
+        "window_size": 10,
+        "save_history": true
+    },
+    "storage": {
+        "type": "file",
+        "output_dir": "./output"
+    },
+    "executor": {
+        "batch_size": 5,
+        "max_retries": 3,
+        "timeout": "30s",
+        "max_workers": 10
+    }
+}

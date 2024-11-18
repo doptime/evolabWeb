@@ -1,0 +1,171 @@
+package agents
+
+import (
+	"context"
+	"encoding/json"
+	"fmt"
+	"reflect"
+
+	"github.com/tmc/langchaingo/jsonschema"
+)
+
+var FunctionMap = make(map[string]func(string) (string, error))
+
+func handleSingleFunctionCall(funcCallMap map[string]interface{}) {
+	functionName, ok := funcCallMap["name"].(string)
+	if !ok {
+		fmt.Println("Error: function name not found in function call map")
+		return
+	}
+	fun, ok := FunctionMap[functionName]
+	if !ok {
+		fmt.Println("Error: function not found in FunctionMap")
+		return
+	}
+
+	arguments, ok := funcCallMap["arguments"].(map[string]interface{})
+	if !ok {
+		fmt.Println("Error: function arguments not found in function call map")
+		return
+	}
+	argumentsJson, err := json.Marshal(arguments)
+	if err != nil {
+		fmt.Println("Error marshalling arguments:", err)
+		return
+	}
+	fun(string(argumentsJson))
+}
+func HandleFuntionCall(ctx context.Context, inputs string) {
+	var responseMap map[string]any
+	if err := json.Unmarshal([]byte(inputs), &responseMap); err == nil {
+		if funcCalls, exists := responseMap["function_call"]; exists {
+			switch fc := funcCalls.(type) {
+			case map[string]interface{}:
+				handleSingleFunctionCall(fc)
+			case []interface{}:
+				// Multiple function calls
+				for _, call := range fc {
+					if callMap, ok := call.(map[string]interface{}); ok {
+						handleSingleFunctionCall(callMap)
+					}
+				}
+			}
+			return
+		}
+	}
+}
+
+type FunctionCall interface {
+	String() string
+}
+
+// Tool 是FuctionCall的逻辑实现。FunctionCall 是Tool的接口定义
+type Tool[v any] struct {
+	// Name is the name of the function.
+	Name string `json:"name"`
+	// Description is a description of the function.
+	Description string `json:"description"`
+	Parameters  map[string]jsonschema.Definition
+	function    func(string) (string, error)
+}
+
+func (t *Tool[v]) String() string {
+	definition := map[string]interface{}{
+		"name":        t.Name,
+		"description": t.Description,
+		"parameters":  t.Parameters,
+	}
+	data, err := json.Marshal(definition)
+	if err != nil {
+		fmt.Println("Error marshalling tool:", err)
+		return ""
+	}
+	return string(data)
+}
+
+func NewTool[v any](name string, description string, f func(param v) (string, error)) *Tool[v] {
+	a := &Tool[v]{Name: name, Description: description}
+
+	// Inspect the function signature
+	funcType := reflect.TypeOf(f)
+	if funcType.NumIn() != 1 {
+		// Handle error: function must have exactly one parameter
+		return a
+	}
+
+	paramType := funcType.In(0)
+	if paramType.Kind() != reflect.Struct {
+		// Handle error: param must be a struct
+		return a
+	}
+
+	// Map parameter fields to JSON schema definitions
+	parameters := make(map[string]jsonschema.Definition)
+	for i := 0; i < paramType.NumField(); i++ {
+		field := paramType.Field(i)
+		def := jsonschema.Definition{
+			Type:        mapKindToDataType(field.Type.Kind()),
+			Description: field.Tag.Get("description"),
+		}
+		parameters[field.Name] = def
+	}
+
+	a.Parameters = parameters
+
+	// Define the function to handle LLM response
+	a.function = func(llmresponse string) (string, error) {
+		var params v
+		err := json.Unmarshal([]byte(llmresponse), &params)
+		if err != nil {
+			return "", err
+		}
+		return f(params)
+	}
+
+	FunctionMap[a.Name] = a.function
+	FunctionToolsMap[a.Name] = a.String()
+	return a
+}
+
+var FunctionToolsMap = map[string]string{}
+
+func FunctionTools(toolNames ...string) string {
+	functions := make([]string, 0, len(toolNames))
+	for _, t := range toolNames {
+		functionTool, ok := FunctionToolsMap[t]
+		if !ok {
+			fmt.Println("Error: tool not found in FunctionToolsMap")
+			continue
+		}
+		functions = append(functions, functionTool)
+	}
+
+	functionsJSON, err := json.Marshal(functions)
+	if err != nil {
+		fmt.Println("Error marshalling functions:", err)
+		return ""
+	}
+
+	return "```json\n{\n \"fuction_call\": " + string(functionsJSON) + "}```"
+}
+
+func mapKindToDataType(kind reflect.Kind) jsonschema.DataType {
+	switch kind {
+	case reflect.Struct:
+		return jsonschema.Object
+	case reflect.Float32, reflect.Float64:
+		return jsonschema.Number
+	case reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64:
+		return jsonschema.Integer
+	case reflect.String:
+		return jsonschema.String
+	case reflect.Slice, reflect.Array:
+		return jsonschema.Array
+	case reflect.Bool:
+		return jsonschema.Boolean
+	case reflect.Invalid:
+		return jsonschema.Null
+	default:
+		return jsonschema.String // 默认类型
+	}
+}
