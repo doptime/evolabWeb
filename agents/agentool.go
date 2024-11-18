@@ -11,6 +11,8 @@ import (
 	openai "github.com/sashabaranov/go-openai"
 )
 
+var SharedMemory = map[string]any{}
+
 // GoalProposer is responsible for proposing goals using an OpenAI model,
 // handling function calls, and managing callbacks.
 type Agentool[v any] struct {
@@ -37,14 +39,16 @@ func NewAgentool[v any](Name string, Description string, llm models.Model, promp
 
 // ProposeGoals generates goals based on the provided file contents.
 // It renders the prompt, sends a request to the OpenAI model, and processes the response.
-func (a *Agentool[v]) Call(ctx context.Context, param map[string]any) error {
+func (a *Agentool[v]) Call(ctx context.Context, memories ...map[string]any) error {
 	// Render the prompt with the provided files content and available functions
 	var params = map[string]any{}
-	for k, v := range param {
-		params[k] = v
-	}
 	for k, v := range SharedMemory {
 		params[k] = v
+	}
+	for _, memory := range memories {
+		for k, v := range memory {
+			params[k] = v
+		}
 	}
 
 	var promptBuffer bytes.Buffer
