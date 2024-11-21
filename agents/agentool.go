@@ -3,8 +3,7 @@ package agents
 import (
 	"bytes"
 	"context"
-	"encoding/json"
-	"log"
+	"fmt"
 	"text/template"
 
 	"github.com/doptime/evolab/models"
@@ -12,34 +11,28 @@ import (
 )
 
 var SharedMemory = map[string]any{}
+var SharedMemorySaveTM = map[string]int64{}
 
 // GoalProposer is responsible for proposing goals using an OpenAI model,
 // handling function calls, and managing callbacks.
-type Agentool[v any] struct {
-	Name        string
-	Description string
-	Model       models.Model
-	Prompt      *template.Template
-	Tools       []openai.Tool
-	CallBack    func(ctx context.Context, inputs string) error
+type Agentool struct {
+	Model    models.Model
+	Prompt   *template.Template
+	Tools    []openai.Tool
+	CallBack func(ctx context.Context, inputs string) error
 }
 
-func NewAgentool[v any](Name string, Description string, llm models.Model, prompt *template.Template) *Agentool[v] {
-	tool := NewTool[v](Name, Description, func(param v) (interface{}, error) {
-		return nil, nil
-	})
-	return &Agentool[v]{
-		Name:        Name,
-		Description: Description,
-		Model:       llm,
-		Prompt:      prompt,
-		Tools:       []openai.Tool{tool.Tool},
+func NewAgent(llm models.Model, prompt *template.Template, tools ...openai.Tool) *Agentool {
+	return &Agentool{
+		Model:  llm,
+		Prompt: prompt,
+		Tools:  tools,
 	}
 }
 
 // ProposeGoals generates goals based on the provided file contents.
 // It renders the prompt, sends a request to the OpenAI model, and processes the response.
-func (a *Agentool[v]) Call(ctx context.Context, memories ...map[string]any) error {
+func (a *Agentool) Call(ctx context.Context, memories ...map[string]any) error {
 	// Render the prompt with the provided files content and available functions
 	var params = map[string]any{}
 	for k, v := range SharedMemory {
@@ -53,6 +46,7 @@ func (a *Agentool[v]) Call(ctx context.Context, memories ...map[string]any) erro
 
 	var promptBuffer bytes.Buffer
 	if err := a.Prompt.Execute(&promptBuffer, params); err != nil {
+		fmt.Printf("Error rendering prompt: %v\n", err)
 		return err
 	}
 
@@ -65,39 +59,19 @@ func (a *Agentool[v]) Call(ctx context.Context, memories ...map[string]any) erro
 				Content: promptBuffer.String(),
 			},
 		},
-		Tools:        a.Tools,
-		FunctionCall: "auto", // Let the model decide which function to call
+		Tools: a.Tools,
 	}
 
 	// Send the request to the OpenAI API
 	resp, err := a.Model.Client.CreateChatCompletion(ctx, req)
 	if err != nil {
+		fmt.Println("Error creating chat completion:", err)
 		return err
 	}
-
 	// Process each choice in the response
 	for _, choice := range resp.Choices {
-		if choice.Message.FunctionCall != nil {
-
-			// Handle function call
-			functionName := choice.Message.FunctionCall.Name
-			arguments := choice.Message.FunctionCall.Arguments
-
-			// Parse arguments JSON
-			var args map[string]interface{}
-			if err := json.Unmarshal([]byte(arguments), &args); err != nil {
-				log.Printf("Error parsing arguments for function %s: %v", functionName, err)
-				continue
-			}
-			ret, err := HandleSingleFunctionCall(functionName, args)
-			if err == nil {
-				SharedMemory[functionName] = ret
-			}
-			return err
-
-		} else {
-			// Handle regular message from the model
-			log.Printf("LLM Response: %s", choice.Message.Content)
+		for _, toolcall := range choice.Message.ToolCalls {
+			HandleSingleFunctionCall(toolcall.Function.Name, toolcall.Function.Arguments)
 		}
 	}
 

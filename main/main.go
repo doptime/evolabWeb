@@ -46,8 +46,5 @@ func main() {
 
 	}
 	agents.SharedMemory["Files"] = strings.Join(AllFiles, "\n")
-
-	agents.GoalProposer.Call(context.Background())
-	agents.CodeRefactor.Call(context.Background())
-
+	agents.AgentInterviewer.Call(context.Background())
 }

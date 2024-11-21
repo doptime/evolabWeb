@@ -25,13 +25,14 @@ func NewModel(baseURL, apiKey, modelName string) Model {
 }
 
 const (
-	EndPoint8007            = "http://gpu.lan:8007/v1"
-	EndPoint8006            = "http://gpu.lan:8006/v1"
-	EndPoint8003            = "http://gpu.lan:8003/v1"
-	ApiKey                  = "token-deaf"
-	ModelNameQwen32B        = "Qwen/Qwen2.5-32B-Instruct-AWQ"
-	ModelNameQwen72B        = "Qwen/Qwen2.5-72B-Instruct-AWQ"
-	ModelNameQwen14B        = "Qwen/Qwen2.5-14B-Instruct-AWQ"
+	EndPoint8007     = "http://gpu.lan:8007/v1"
+	EndPoint8006     = "http://gpu.lan:8006/v1"
+	EndPoint8003     = "http://gpu.lan:8003/v1"
+	ApiKey           = "token-deaf"
+	ModelNameQwen32B = "Qwen/Qwen2.5-32B-Instruct-AWQ"
+	ModelNameQwen72B = "Qwen/Qwen2.5-72B-Instruct-AWQ"
+	//ModelNameQwen14B        = "Qwen/Qwen2.5-14B-Instruct-AWQ"
+	ModelNameQwen14B        = " /home/deaf/.cache/huggingface/hub/models--Qwen--Qwen2.5-14B-Instruct-AWQ/snapshots/15caf3706c437f72fe4a0b64b4aee94b5e823e9c"
 	ModelNameQwen7B         = "Qwen/Qwen2.5-7B-Instruct-AWQ"
 	ModelNamePhi3           = "neuralmagic/Phi-3-medium-128k-instruct-quantized.w4a16"
 	ModelNameGemma          = "neuralmagic/gemma-2-9b-it-quantized.w4a16"
@@ -53,6 +54,7 @@ var (
 	ModelMistralSmall   = NewModel(EndPoint8003, ApiKey, ModelNameMistralSmall)
 	ModelMistralNemoAwq = NewModel(EndPoint8003, ApiKey, ModelNameMistralNemoAwq)
 	ModelLlama38b       = NewModel(EndPoint8007, ApiKey, ModelNameLlama38b)
+	ModelDefault        = ModelQwen14B
 )
 
 // Models maps model names to their corresponding Model instances.
