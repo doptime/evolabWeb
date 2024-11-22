@@ -14,7 +14,7 @@ func main() {
 
 	// Define the directory path
 	dirPath := "/Users/yang/doptime/redisdb"
-	dirPath = "/Users/yang/aircraft/test"
+	dirPath = "/Users/yang/aircraft/wing"
 
 	// Read directory entries
 	entries, err := os.ReadDir(dirPath)
@@ -46,5 +46,7 @@ func main() {
 
 	}
 	agents.SharedMemory["Files"] = strings.Join(AllFiles, "\n")
-	agents.AgentInterviewer.Call(context.Background())
+	for i := 0; i < 100; i++ {
+		agents.AgentInterviewer.Call(context.Background())
+	}
 }

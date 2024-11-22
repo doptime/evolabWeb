@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	SharedMemory["SystemGoal"] = "refactor the files in the directory"
+	SharedMemory["SystemGoal"] = "实现系统的自自组织-深入探索系统可能得性能极限，结构极限，同时确保实现的简洁，可行"
 
 	SharedMemory["InterviewState"] = CurInterview
 
@@ -19,18 +19,9 @@ type Interview struct {
 	InterviewScript InterviewScript
 	Interviewee     Interviewee
 	Interviews      []InterviewSession
-	NextQuestion    NextQuestionToAsk
 }
 
 var CurInterview = &Interview{}
-
-type NextQuestionToAsk struct {
-	GeneratedQuestion string `json:"generated_question" description:"Relecttion on the Interview, Generated question to ask the participant。1 of 3 possile way to generate question:1) Generate a follow-up question. 2)Move to next script questio in the interview script 3) ask new question if needed. If choosing follow-up, generate a natural question that: - Explores interesting points mentioned; - Seeks clarification if needed;- Maintains conversational tone; - Stays within current topic"`
-}
-
-var QuestionAgent = NewTool[*NextQuestionToAsk]("next-question-to-ask", "Determines next interview action and generates follow-up questions", func(param *NextQuestionToAsk) {
-	CurInterview.NextQuestion = *param
-})
 
 type EndInterviewAndSummarizeObservations struct {
 	Expert       string   `json:"expert" description:"You are an expert with a PhD analyzing an interview transcript. This is your Expertise."`
@@ -41,39 +32,50 @@ var EndInterviewAndSummarizeObservationsTool = NewTool[*EndInterviewAndSummarize
 	"end-interview-and-summarize-observations", "End the interview and summarize observations", func(param *EndInterviewAndSummarizeObservations) {
 		CurInterview.InterviewScript = InterviewScript{}
 		CurInterview.Interviewee = Interviewee{}
-		CurInterview.NextQuestion = NextQuestionToAsk{}
 		CurInterview.Interviews = []InterviewSession{}
-
 		SharedMemory["InterviewObservations"] = append(SharedMemory["InterviewObservations"].([]string), param.Observations...)
 	})
 
 type InterviewScript struct {
-	CurrentTopics []string          `json:"current_topics" description:"Current topic of the interview, should be understandable by the participant without context"`
-	Questions     map[string]string `json:"questions" description:"Questions to ask, with key the bullet point of the topic and value the question"`
-	TimeLimit     int               `json:"time_limit" description:"Time xxs to spent on the topics, 120s usually"`
+	CurrentTopics []string `description:"topics of the interview, should be understandable by the participant without context"`
+	Questions     []string `description:"Questions to ask, with key the bullet point of the topic and value the question"`
 }
 
-var GenInterviewScript = NewTool[*InterviewScript]("interviewer-script", " Generates a new interview script based on the current conversation context")
+var GenInterviewScript = NewTool[*InterviewScript]("interviewerScript", "Generates or revise interview script based on background context. For easy ")
 
 type InterviewSession struct {
-	ExplanationOnCurrentTopic string `json:"explanation_on_current_topic" description:"Explanation on the current topic"`
-	Question                  string `json:"current_topic" description:"Current topic of the interview"`
-	Response                  string `json:"interviewee" description:"Interviewee"`
+	NextQuestionReflection        string `description:"Relecttion on the Interview, Generated question to ask the participant。1 of 3 possile way to generate question:1) Generate a follow-up question. 2)Move to next script questio in the interview script 3) ask new question if needed. If choosing follow-up, generate a natural question that: - Explores interesting points mentioned; - Seeks clarification if needed;- Maintains conversational tone; - Stays within current topic"`
+	ExplanationsToTheIntervieweee string `description:"Introduce topic context to interviewee, sould be understandable without background"`
+	Question                      string `description:"Current topic of the interview"`
+	Response                      string `description:"Interviewee"`
 }
 
-var TakenInterview = NewTool[*InterviewSession]("TakeInterview", " Ask The Interviewee a question, and get the response", func(param *InterviewSession) {
+var TakenInterviewSession = NewTool[*InterviewSession]("InterviewSession", "One interview Session. Reflection , then explain necessary info to the interviewee, ask the Interviewee a question, and get the response", func(param *InterviewSession) {
 	CurInterview.Interviews = append(CurInterview.Interviews, *param)
 })
 
 type FileSaver struct {
-	Path        string `json:"path" description:"The path to save the file"`
-	FileContent string `json:"file_content" description:"The content of the file to save"`
+	Path        string `description:"The path to save the file"`
+	FileContent string `description:"The content of the file to save"`
 }
 
-var FileSaverTool = NewTool[*Interview]("save-final-result", " Finally After All interview has done, commit the file to the directory")
+var FileSaverTool = NewTool[*FileSaver]("FileSaver", "After All interview has done, commit the file to the directory")
 
 var InterviewerPrompt = template.Must(template.New("question").Parse(`
-You are an AI System to complete the system goal: {{.SystemGoal}} by carrying interviews with a participant.
+You are an AI System to complete the system goal: {{.SystemGoal}}
+
+You work by carrying interviews with interviewee participants. Here's Work flow:
+Review Current context infomation. And then take one of following Functions call (Function Tool):
+1. Propose a Interview Script to fulfill the system goal
+2. Ensure there's an proper Interviewee, change Interviewee if needed
+3. continue with the InterviewSession
+4. Transcribe the InterviewSessions to interview obeervations. This will finish current interview and start a new one.
+5. save phased result to the directory using FileSaver tool
+
+Always responsed Message in ToolCalls part. One ToolCall per interaction.
+
+Your work style ∈ { John D. Rockefeller, Andrew Carnegie, Henry Ford, Walt Disney, Bill Gates, Steve Jobs, J.P. Morgan, Jack Ma, George Soros, Thomas Edison, Nikola Tesla, Vladimir Shukhov, Claude Shannon, Vannevar Bush, Alan Turing}
+
 This is Files in the directory:
 {{.Files}}
 
@@ -83,15 +85,6 @@ This is current interview state:
  This is Interview Observations:
  {{.InterviewObservations}}
 
- Work flow:
-Review Current context infomation. And then determine whether to:
-1. Propose a Interview Script to fulfill the system goal
-2. Ask To Generate A Interviewee
-5. Reflection on the interview and raise next question
-4. continue interview with the interviewee
-5. save final result to the directory using save-final-result tool
-
-
 `))
 var AgentInterviewer = NewAgent(models.ModelDefault, InterviewerPrompt,
-	GenInterviewScript.Tool, EndInterviewAndSummarizeObservationsTool.Tool, IntervieweeAgent.Tool, QuestionAgent.Tool, TakenInterview.Tool, FileSaverTool.Tool)
+	GenInterviewScript.Tool, EndInterviewAndSummarizeObservationsTool.Tool, IntervieweeAgent.Tool, TakenInterviewSession.Tool, FileSaverTool.Tool)

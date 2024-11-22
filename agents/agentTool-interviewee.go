@@ -3,7 +3,8 @@ package agents
 // Interviewee represents a simulated individual in the multi-agent system
 type Interviewee struct {
 	// Basic Information
-	ID     string `json:"id" description:"Unique identifier for the character"`
+	//SimilarFamousPerson []string `json:"similar_famous_person" description:"Similar famous person: name"`
+	Name   string `json:"name" description:"Unique name for the Interviewee"`
 	Gender string `json:"gender" description:"Gender identity: male, female, non_binary, other"`
 	Age    int    `json:"age" description:"Age in years: 20-65"`
 
@@ -93,4 +94,4 @@ type Interviewee struct {
 	MentorshipStyle string `json:"mentorship_style" description:"Mentoring approach: directive, supportive, delegative, hands_off"`
 }
 
-var IntervieweeAgent = NewTool[*Interviewee]("GeneratedCharacter", "Generate a character profile based on the specified task requirements for software development projects. The function analyzes the task description and creates an appropriate personality with relevant attributes.", nil)
+var IntervieweeAgent = NewTool[*Interviewee]("gen-or-change-interviewee-for-topic", "Prepare a character profile based on the specified task requirements for system goal. The function analyzes the task description and creates an appropriate personality with relevant attributes.")

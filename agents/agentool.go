@@ -3,7 +3,9 @@ package agents
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"fmt"
+	"strings"
 	"text/template"
 
 	"github.com/doptime/evolab/models"
@@ -43,6 +45,14 @@ func (a *Agentool) Call(ctx context.Context, memories ...map[string]any) error {
 			params[k] = v
 		}
 	}
+	// var ToolChoices = []openai.ToolChoice{}
+	// for _, tool := range a.Tools {
+	// 	ToolChoices = append(ToolChoices, openai.ToolChoice{
+	// 		Type:     "function",
+	// 		Function: openai.ToolFunction{Name: tool.Function.Name},
+	// 	})
+	// }
+	// ToolChoice: ToolChoices,
 
 	var promptBuffer bytes.Buffer
 	if err := a.Prompt.Execute(&promptBuffer, params); err != nil {
@@ -64,15 +74,44 @@ func (a *Agentool) Call(ctx context.Context, memories ...map[string]any) error {
 
 	// Send the request to the OpenAI API
 	resp, err := a.Model.Client.CreateChatCompletion(ctx, req)
+	fmt.Println("resp:", resp)
 	if err != nil {
 		fmt.Println("Error creating chat completion:", err)
 		return err
 	}
 	// Process each choice in the response
+	var toolCalls []openai.ToolCall
 	for _, choice := range resp.Choices {
-		for _, toolcall := range choice.Message.ToolCalls {
-			HandleSingleFunctionCall(toolcall.Function.Name, toolcall.Function.Arguments)
+		toolCalls = append(toolCalls, choice.Message.ToolCalls...)
+	}
+	if len(toolCalls) == 0 && len(resp.Choices) > 0 {
+		rsp := resp.Choices[0].Message.Content
+		items := strings.Split(rsp, "<tool_call>")
+		for i := 1; i < len(items)-1; i++ {
+			toolcallString := items[i]
+			type FunctionCall struct {
+				Name string `json:"name,omitempty"`
+				// call function with arguments in JSON format
+				Arguments map[string]any `json:"arguments,omitempty"`
+			}
+			tool := FunctionCall{Arguments: map[string]any{}}
+			toolcall := openai.ToolCall{Function: openai.FunctionCall{}}
+			err := json.Unmarshal([]byte(toolcallString), &tool)
+			if err == nil {
+				argument, _ := json.Marshal(tool.Arguments)
+				toolcall.Type, toolcall.Function.Name, toolcall.Function.Arguments = "function", tool.Name, string(argument)
+				toolCalls = append(toolCalls, toolcall)
+			}
 		}
+	}
+
+	for _, toolcall := range toolCalls {
+
+		tool, ok := ToolMap[toolcall.Function.Name]
+		if !ok {
+			return fmt.Errorf("error: function not found in FunctionMap")
+		}
+		tool.HandleFunctionCall(toolcall.Function.Arguments)
 	}
 
 	return nil
