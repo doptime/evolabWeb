@@ -25,12 +25,14 @@ func NewModel(baseURL, apiKey, modelName string) Model {
 }
 
 const (
-	EndPoint8007     = "http://gpu.lan:8007/v1"
-	EndPoint8006     = "http://gpu.lan:8006/v1"
-	EndPoint8003     = "http://gpu.lan:8003/v1"
-	ApiKey           = "token-deaf"
-	ModelNameQwen32B = "Qwen/Qwen2.5-32B-Instruct-AWQ"
-	ModelNameQwen72B = "Qwen/Qwen2.5-72B-Instruct-AWQ"
+	EndPoint8008          = "http://gpu.lan:8008/v1"
+	EndPoint8007          = "http://gpu.lan:8007/v1"
+	EndPoint8006          = "http://gpu.lan:8006/v1"
+	EndPoint8003          = "http://gpu.lan:8003/v1"
+	ApiKey                = "token-deaf"
+	ModelNameQwen32B      = "Qwen/Qwen2.5-32B-Instruct-AWQ"
+	ModelNameQwen32BCoder = "/home/deaf/.cache/huggingface/hub/models--Qwen--Qwen2.5-Coder-32B-Instruct-AWQ/snapshots/809193f9fbb537e7ad2167d1991eeb5c9c14291b"
+	ModelNameQwen72B      = "Qwen/Qwen2.5-72B-Instruct-AWQ"
 	//ModelNameQwen14B = "Qwen/Qwen2.5-14B-Instruct-AWQ"
 	ModelNameQwen14B        = "/home/deaf/.cache/huggingface/hub/models--Qwen--Qwen2.5-14B-Instruct-AWQ/snapshots/15caf3706c437f72fe4a0b64b4aee94b5e823e9c"
 	ModelNameQwen7B         = "Qwen/Qwen2.5-7B-Instruct-AWQ"
@@ -40,11 +42,13 @@ const (
 	ModelNameMistralSmall   = "AMead10/Mistral-Small-Instruct-2409-awq"
 	ModelNameMistralNemoAwq = "casperhansen/mistral-nemo-instruct-2407-awq"
 	ModelNameLlama38b       = "neuralmagic/Meta-Llama-3.1-8B-Instruct-quantized.w4a16"
+	ModelNameMarcoo1        = "AIDC-AI/Marco-o1"
 )
 
 // Initialize all models with their corresponding endpoints and names.
 var (
 	ModelQwen32B        = NewModel(EndPoint8007, ApiKey, ModelNameQwen32B)
+	ModelQwen32BCoder   = NewModel(EndPoint8007, ApiKey, ModelNameQwen32BCoder)
 	ModelQwen72B        = NewModel(EndPoint8007, ApiKey, ModelNameQwen72B)
 	ModelQwen14B        = NewModel(EndPoint8007, ApiKey, ModelNameQwen14B)
 	ModelQwen7B         = NewModel(EndPoint8007, ApiKey, ModelNameQwen7B)
@@ -54,7 +58,8 @@ var (
 	ModelMistralSmall   = NewModel(EndPoint8003, ApiKey, ModelNameMistralSmall)
 	ModelMistralNemoAwq = NewModel(EndPoint8003, ApiKey, ModelNameMistralNemoAwq)
 	ModelLlama38b       = NewModel(EndPoint8007, ApiKey, ModelNameLlama38b)
-	ModelDefault        = ModelQwen14B
+	ModelMarcoo1        = NewModel(EndPoint8008, ApiKey, ModelNameMarcoo1)
+	ModelDefault        = ModelQwen32B
 )
 
 // Models maps model names to their corresponding Model instances.

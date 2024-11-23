@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -46,6 +47,10 @@ func main() {
 
 	}
 	agents.SharedMemory["Files"] = strings.Join(AllFiles, "\n")
+	go agents.AutoSaveSharedMemory()
+	memoryjson, _ := json.Marshal(agents.SharedMemory)
+	fmt.Println(string(memoryjson))
+
 	for i := 0; i < 100; i++ {
 		agents.AgentInterviewer.Call(context.Background())
 	}

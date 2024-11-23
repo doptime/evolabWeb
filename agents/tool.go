@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"log"
 	"reflect"
-	"time"
 
 	openai "github.com/sashabaranov/go-openai"
 )
@@ -18,27 +17,14 @@ var ToolMap = make(map[string]ToolCallInterface)
 // Tool 是FuctionCall的逻辑实现。FunctionCall 是Tool的接口定义
 type Tool[v any] struct {
 	openai.Tool
-	Functions []func(param v)
+	MemoryCacheKey string
+	Functions      []func(param v)
 }
 
-func (t *Tool[v]) SaveToShareMemory(param interface{}) {
-	name := t.Tool.Function.Name
-	//短期内调用的追加为slice
-	unixNow := time.Now().UnixMilli()
-	lastTm, ok := SharedMemorySaveTM[name]
-	if ok && unixNow-lastTm < 1000 {
-		_value, ok := SharedMemory[name].([]interface{})
-		if !ok {
-			SharedMemory[name] = append(_value, param)
-		} else if _v, ok := SharedMemory[name].(v); ok {
-			SharedMemory[name] = []interface{}{_v, param}
-		}
-	} else {
-		SharedMemory[name] = param
-	}
-	SharedMemorySaveTM[name] = unixNow
+func (t *Tool[v]) WithMemoryCacheKey(key string) *Tool[v] {
+	t.MemoryCacheKey = key
+	return t
 }
-
 func (t *Tool[v]) HandleFunctionCall(Param string) (err error) {
 	var val v
 	vType := reflect.TypeOf(val) // Decode escaped Unicode in Param
@@ -50,7 +36,7 @@ func (t *Tool[v]) HandleFunctionCall(Param string) (err error) {
 			log.Printf("Error parsing arguments for tool %s: %v", t.Tool.Function.Name, err)
 			return err
 		}
-		t.SaveToShareMemory(reflect.ValueOf(valPtr).Interface())
+		SaveToShareMemory(t.MemoryCacheKey, reflect.ValueOf(valPtr).Interface())
 		// Assign the dereferenced pointer to val
 		val = reflect.ValueOf(valPtr).Interface().(v)
 	} else {
@@ -60,7 +46,7 @@ func (t *Tool[v]) HandleFunctionCall(Param string) (err error) {
 			log.Printf("Error parsing arguments for tool %s: %v", t.Tool.Function.Name, err)
 			return err
 		}
-		t.SaveToShareMemory(val)
+		SaveToShareMemory(t.MemoryCacheKey, val)
 	}
 
 	for _, f := range t.Functions {

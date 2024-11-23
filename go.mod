@@ -3,13 +3,13 @@ module github.com/doptime/evolab
 go 1.22.3
 
 require (
+	github.com/cespare/xxhash/v2 v2.3.0
 	github.com/doptime/redisdb v0.0.0-20241018031241-06a004f745d9
 	github.com/sashabaranov/go-openai v1.35.6
 )
 
 require (
 	github.com/BurntSushi/toml v1.4.0 // indirect
-	github.com/cespare/xxhash/v2 v2.3.0 // indirect
 	github.com/dgryski/go-rendezvous v0.0.0-20200823014737-9f7001d12a5f // indirect
 	github.com/doptime/config v0.0.0-20241016061441-7c988e656682 // indirect
 	github.com/doptime/logger v0.0.0-20241013090925-4b12ee9d0b17 // indirect
