@@ -16,6 +16,7 @@ func main() {
 	// Define the directory path
 	dirPath := "/Users/yang/doptime/redisdb"
 	dirPath = "/Users/yang/aircraft/wing"
+	dirPath = "/Users/yang/PrimaryCourseGames/MultiplicationAndDivisionSite"
 
 	// Read directory entries
 	entries, err := os.ReadDir(dirPath)

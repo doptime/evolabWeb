@@ -59,7 +59,7 @@ var (
 	ModelMistralNemoAwq = NewModel(EndPoint8003, ApiKey, ModelNameMistralNemoAwq)
 	ModelLlama38b       = NewModel(EndPoint8007, ApiKey, ModelNameLlama38b)
 	ModelMarcoo1        = NewModel(EndPoint8008, ApiKey, ModelNameMarcoo1)
-	ModelDefault        = ModelQwen32B
+	ModelDefault        = ModelQwen72B
 )
 
 // Models maps model names to their corresponding Model instances.

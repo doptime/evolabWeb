@@ -10,14 +10,10 @@ import (
 
 var SharedMemory = map[string]any{}
 
-var keySaveMemory = redisdb.HashKey[string, any](redisdb.WithKey("SharedMemory"))
+var keySaveMemory = redisdb.HashKey[string, any](redisdb.WithKey("SharedMemoryForLearnMathSite"))
 
 func init() {
-	SharedMemory["SystemGoal"] = "Deeply explore Realize the the system. the possible performance and structural limits of the system, while ensuring the simplicity and feasibility of the implementation"
-
-	SharedMemory["InterviewScript"] = ""
-	SharedMemory["Interviewee"] = ""
-	SharedMemory["InterviewSessions"] = []*InterviewSession{}
+	SharedMemory["InterviewSessions"] = []interface{}{}
 
 	SharedMemory["InterviewObservations"] = []string{}
 
