@@ -43,6 +43,7 @@ const (
 	ModelNameMistralNemoAwq = "casperhansen/mistral-nemo-instruct-2407-awq"
 	ModelNameLlama38b       = "neuralmagic/Meta-Llama-3.1-8B-Instruct-quantized.w4a16"
 	ModelNameMarcoo1        = "AIDC-AI/Marco-o1"
+	ModelNameQwQ32B         = "KirillR/QwQ-32B-Preview-AWQ"
 )
 
 // Initialize all models with their corresponding endpoints and names.
@@ -59,7 +60,8 @@ var (
 	ModelMistralNemoAwq = NewModel(EndPoint8003, ApiKey, ModelNameMistralNemoAwq)
 	ModelLlama38b       = NewModel(EndPoint8007, ApiKey, ModelNameLlama38b)
 	ModelMarcoo1        = NewModel(EndPoint8008, ApiKey, ModelNameMarcoo1)
-	ModelDefault        = ModelQwen72B
+	ModelQwQ32B         = NewModel(EndPoint8007, ApiKey, ModelNameQwQ32B)
+	ModelDefault        = ModelQwQ32B
 )
 
 // Models maps model names to their corresponding Model instances.
