@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	dconfig "github.com/doptime/config"
-	"github.com/doptime/evolab/agents"
 )
 
 type EvoRealm struct {
@@ -20,26 +19,36 @@ type EvoRealm struct {
 
 var EvoRealms []*EvoRealm
 
-func (e *EvoRealm) RealmFilename(filename string) string {
-	return strings.Replace(filename, e.RootPath, e.Name, -1)
+type FileData struct {
+	Path    string
+	Realm   *EvoRealm
+	Content string
+}
+
+func (f *FileData) String() string {
+	realmfilename := strings.Replace(f.Path, f.Realm.RootPath, f.Realm.Name, -1)
+	return "\n\n;Path: " + realmfilename + "\nContent: " + f.Content
 }
 
 // LoadFilesToMemory loads all JSON configuration files from the specified directory into memory.
-func (e *EvoRealm) LoadFilesToMemory() error {
+func (e *EvoRealm) loadRealmFiles() (files []*FileData, err error) {
 	// Check if the directory exists
 	info, err := os.Stat(e.RootPath)
 	if os.IsNotExist(err) {
 		log.Printf("Directory does not exist: %s", e.RootPath)
-		return err
+		return files, err
 	}
 	if !info.IsDir() {
 		log.Printf("Provided path is not a directory: %s", e.RootPath)
-		return err
+		return files, err
 	}
 	if !e.Enable {
 		log.Printf("EvoRealm disabled: %s", e.Name)
-		return nil
+		return files, nil
 	}
+
+	skipdirs := strings.Split(e.SkipDirs, ",")
+	skipfiles := strings.Split(e.SkipFiles, ",")
 
 	// Walk through the directory
 	err = filepath.Walk(e.RootPath, func(path string, info os.FileInfo, err error) error {
@@ -47,39 +56,51 @@ func (e *EvoRealm) LoadFilesToMemory() error {
 			log.Printf("Error accessing path %q: %v\n", path, err)
 			return err
 		}
-		// Skip directories
-		skipdirs := strings.Split(e.SkipDirs, ",")
-		for _, skipdir := range skipdirs {
-			if info.IsDir() && len(e.SkipDirs) > 0 && strings.Contains(path, skipdir) {
-				return filepath.SkipDir
+		if info.IsDir() {
+			// Skip directories
+			for _, skipdir := range skipdirs {
+				if len(skipdir) > 0 && strings.Contains(path, skipdir) {
+					return filepath.SkipDir
+				}
 			}
+			return nil
 		}
+
 		// Skip files
-		skipfiles := strings.Split(e.SkipFiles, ",")
 		for _, skipfile := range skipfiles {
-			if !info.IsDir() && len(e.SkipFiles) > 0 && strings.Contains(path, skipfile) {
+			if len(skipfile) > 0 && strings.Contains(path, skipfile) {
 				return nil
 			}
 		}
-		realmfilename := e.RealmFilename(path)
-		agents.SharedMemory[realmfilename] = append(agents.SharedMemory[realmfilename].([]interface{}), path)
+
+		// Read the file content
+		content, err := os.ReadFile(path)
+		if err != nil {
+			log.Printf("Error reading file %q: %v\n", path, err)
+			return err
+		}
+		files = append(files, &FileData{Path: path, Realm: e, Content: string(content)})
 		return nil
 	})
 
 	if err != nil {
 		log.Printf("Error walking through directory %s: %v", e.RootPath, err)
-		return err
+		return files, err
 	}
 
 	log.Printf("All configuration files loaded successfully from directory: %s", e.RootPath)
-	return nil
+	return files, nil
+}
+func LoadRealmsFiles() (files []*FileData, err error) {
+	for _, evoRealm := range EvoRealms {
+		if evoRealm.Enable {
+			_files, _ := evoRealm.loadRealmFiles()
+			files = append(files, _files...)
+		}
+	}
+	return files, nil
 }
 
 func init() {
 	dconfig.LoadItemFromToml("EvoRealms", &EvoRealms)
-	for _, evoRealm := range EvoRealms {
-		if evoRealm.Enable {
-			evoRealm.LoadFilesToMemory()
-		}
-	}
 }

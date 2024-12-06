@@ -5,6 +5,7 @@ import (
 	"log"
 	"reflect"
 
+	"github.com/doptime/evolab/mem"
 	openai "github.com/sashabaranov/go-openai"
 )
 
@@ -36,7 +37,7 @@ func (t *Tool[v]) HandleFunctionCall(Param string) (err error) {
 			log.Printf("Error parsing arguments for tool %s: %v", t.Tool.Function.Name, err)
 			return err
 		}
-		SaveToShareMemory(t.MemoryCacheKey, reflect.ValueOf(valPtr).Interface())
+		mem.SaveToShareMemory(t.MemoryCacheKey, reflect.ValueOf(valPtr).Interface())
 		// Assign the dereferenced pointer to val
 		val = reflect.ValueOf(valPtr).Interface().(v)
 	} else {
@@ -46,7 +47,7 @@ func (t *Tool[v]) HandleFunctionCall(Param string) (err error) {
 			log.Printf("Error parsing arguments for tool %s: %v", t.Tool.Function.Name, err)
 			return err
 		}
-		SaveToShareMemory(t.MemoryCacheKey, val)
+		mem.SaveToShareMemory(t.MemoryCacheKey, val)
 	}
 
 	for _, f := range t.Functions {

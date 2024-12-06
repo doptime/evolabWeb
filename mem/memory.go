@@ -1,29 +1,43 @@
-package agents
+package mem
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 	"time"
 
 	"github.com/cespare/xxhash/v2"
+	"github.com/doptime/evolab/config"
 	"github.com/doptime/redisdb"
+	cmap "github.com/orcaman/concurrent-map/v2"
+	"github.com/samber/lo"
 )
 
 var SharedMemory = map[string]any{}
+var FilesInRealms []*config.FileData
+var IntentionFiles = cmap.New[string]()
 
-var keySaveMemory = redisdb.HashKey[string, any](redisdb.WithKey("SharedMemoryForLearnMathSite"))
+var keySaveMemory = redisdb.HashKey[string, any](redisdb.WithKey("SharedMemoryForRedisdb"))
 
 func init() {
-	SharedMemory["InterviewSessions"] = []interface{}{}
+	var err error
+	SharedMemory["Files"] = []*config.FileData{}
+	FilesInRealms, err = config.LoadRealmsFiles()
+	if err != nil {
+		fmt.Println(err)
+	}
+	SharedMemory["Files"] = FilesInRealms
 
-	SharedMemory["InterviewObservations"] = []string{}
-
-	_sharedMemory, err := keySaveMemory.HGetAll()
-	if err == nil {
-		for k, v := range _sharedMemory {
-			SharedMemory[k] = v
+	for _, intention := range FilesInRealms {
+		if strings.LastIndex(intention.Path, ".evointention") != -1 {
+			IntentionFiles.Set(intention.Path, intention.Content)
 		}
 	}
+	FilesInRealms = lo.Filter(FilesInRealms, func(file *config.FileData, i int) bool {
+		return strings.LastIndex(file.Path, ".evointention") == -1
+	})
 }
+
 func AutoSaveSharedMemory() {
 	SharedMemoryjson, _ := json.Marshal(SharedMemory)
 	var lstSaveHash = xxhash.Sum64(SharedMemoryjson)

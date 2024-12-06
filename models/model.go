@@ -43,12 +43,13 @@ const (
 	ModelNameMistralNemoAwq = "casperhansen/mistral-nemo-instruct-2407-awq"
 	ModelNameLlama38b       = "neuralmagic/Meta-Llama-3.1-8B-Instruct-quantized.w4a16"
 	ModelNameMarcoo1        = "AIDC-AI/Marco-o1"
-	ModelNameQwQ32B         = "KirillR/QwQ-32B-Preview-AWQ"
+	//ModelNameQwQ32B         = "KirillR/QwQ-32B-Preview-AWQ"
+	ModelNameQwQ32B = "/home/deaf/.cache/huggingface/hub/models--KirillR--QwQ-32B-Preview-AWQ/snapshots/b082e5c095a17c50cc78fc6fe43a0eae326bd203"
 )
 
 // Initialize all models with their corresponding endpoints and names.
 var (
-	ModelQwen32B        = NewModel(EndPoint8007, ApiKey, ModelNameQwen32B)
+	ModelQwen32B        = NewModel(EndPoint8008, ApiKey, ModelNameQwen32B)
 	ModelQwen32BCoder   = NewModel(EndPoint8007, ApiKey, ModelNameQwen32BCoder)
 	ModelQwen72B        = NewModel(EndPoint8007, ApiKey, ModelNameQwen72B)
 	ModelQwen14B        = NewModel(EndPoint8007, ApiKey, ModelNameQwen14B)
@@ -61,6 +62,7 @@ var (
 	ModelLlama38b       = NewModel(EndPoint8007, ApiKey, ModelNameLlama38b)
 	ModelMarcoo1        = NewModel(EndPoint8008, ApiKey, ModelNameMarcoo1)
 	ModelQwQ32B         = NewModel(EndPoint8007, ApiKey, ModelNameQwQ32B)
+	ModelQwen32B12K     = NewModel(EndPoint8008, ApiKey, ModelNameQwen32B)
 	ModelDefault        = ModelQwQ32B
 )
 

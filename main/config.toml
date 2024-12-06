@@ -2,26 +2,49 @@ CONFIG_URL = "abc"
 ConfigUrl = ""
 
 [Http]
-  DangerousAutoWhitelist = true
-  CORES = "*"
-  JwtSecret = "DhSQekDq1XctftfH5LnX6V5pmJMTaOOM"
-  MaxBufferSize = 10485760
-  Path = "/"
-  Port = 81
+DangerousAutoWhitelist = true
+CORES = "*"
+JwtSecret = "DhSQekDq1XctftfH5LnX6V5pmJMTaOOM"
+MaxBufferSize = 10485760
+Path = "/"
+Port = 81
 
 [[HttpRPC]]
-  Jwt = "ther's no such jwt"
-  Name = "doptime"
-  UrlBase = "https://api.doptime.com"
+Jwt = "ther's no such jwt"
+Name = "doptime"
+UrlBase = "https://api.doptime.com"
 
 [[Redis]]
-  DB = 2
-  Host = "keydb.lan"
-  Name = "default"
-  Password = "mXJLFAt3y47woLF5AkNiKs3ug1D0yWz8"
-  Port = 6379
-  Username = ""
+DB = 2
+Host = "keydb.lan"
+Name = "default"
+Password = "mXJLFAt3y47woLF5AkNiKs3ug1D0yWz8"
+Port = 6379
+Username = ""
 
 [Settings]
-  LogLevel = 1
-  SUToken = "HboVsNf0bMa1fYq9HXr02SaRD7yz3gyj"
+LogLevel = 1
+SUToken = "HboVsNf0bMa1fYq9HXr02SaRD7yz3gyj"
+
+[[EvoRealms]]
+Name = "RedisDB"
+Enable = true
+RootPath = "/Users/yang/doptime/redisdb"
+SkipFiles = ".DS_Store,.gitignore,.mod,.sum"
+SkipDirs = "doc,.git,.idea,.vscode"
+
+[[EvoRealms]]
+Name = "aircraft"
+Enable = false
+RootPath = "/Users/yang/aircraft"
+SkipFiles = ".DS_Store,.gitignore,.mod,.sum"
+SkipDirs = ".git,.idea,.vscode"
+
+[[EvoRealms]]
+Name = "aircraftwing"
+Enable = false
+RootPath = "/Users/yang/aircraft/wing"
+SkipFiles = ".DS_Store,.gitignore,.mod,.sum,expired_ideas.md"
+SkipDirs = ".git,.idea,.vscode"
+
+
