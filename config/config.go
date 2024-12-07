@@ -1,6 +1,7 @@
 package config
 
 import (
+	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -29,9 +30,18 @@ func (f *FileData) String() string {
 	realmfilename := strings.Replace(f.Path, f.Realm.RootPath, f.Realm.Name, -1)
 	return "\n\n;Path: " + realmfilename + "\nContent: " + f.Content
 }
+func DefaultRealmPath() string {
+	for _, realm := range EvoRealms {
+		if len(realm.Name) > 0 {
+			return realm.RootPath
+		}
+	}
+	fmt.Println("No default realm found in config")
+	return ""
+}
 
 // LoadFilesToMemory loads all JSON configuration files from the specified directory into memory.
-func (e *EvoRealm) loadRealmFiles() (files []*FileData, err error) {
+func (e *EvoRealm) LoadRealmFiles() (files []*FileData, err error) {
 	// Check if the directory exists
 	info, err := os.Stat(e.RootPath)
 	if os.IsNotExist(err) {
@@ -94,7 +104,7 @@ func (e *EvoRealm) loadRealmFiles() (files []*FileData, err error) {
 func LoadRealmsFiles() (files []*FileData, err error) {
 	for _, evoRealm := range EvoRealms {
 		if evoRealm.Enable {
-			_files, _ := evoRealm.loadRealmFiles()
+			_files, _ := evoRealm.LoadRealmFiles()
 			files = append(files, _files...)
 		}
 	}

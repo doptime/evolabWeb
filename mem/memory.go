@@ -15,10 +15,31 @@ import (
 
 var SharedMemory = map[string]any{}
 var FilesInRealms []*config.FileData
-var IntentionFiles = cmap.New[string]()
+var IntentionFiles = cmap.New[*config.FileData]()
 
 var keySaveMemory = redisdb.HashKey[string, any](redisdb.WithKey("SharedMemoryForRedisdb"))
 
+func loadEovoLabIntention() {
+	for _, realm := range config.EvoRealms {
+		realm := *realm
+		//remove .evolab in realm.SkipPath
+		realm.SkipDirs = strings.Replace(realm.SkipDirs, ".evolab", "", -1)
+		files, err := realm.LoadRealmFiles()
+		if err != nil {
+			continue
+		}
+		//keep files in .evolab only
+		files = lo.Filter(files, func(file *config.FileData, i int) bool {
+			return strings.LastIndex(file.Path, ".evolab") != -1
+		})
+
+		for _, intention := range files {
+			if strings.LastIndex(intention.Path, ".intention") != -1 && strings.LastIndex(intention.Path, ".intentiondone") == -1 {
+				IntentionFiles.Set(intention.Path, intention)
+			}
+		}
+	}
+}
 func init() {
 	var err error
 	SharedMemory["Files"] = []*config.FileData{}
@@ -27,15 +48,8 @@ func init() {
 		fmt.Println(err)
 	}
 	SharedMemory["Files"] = FilesInRealms
+	loadEovoLabIntention()
 
-	for _, intention := range FilesInRealms {
-		if strings.LastIndex(intention.Path, ".evointention") != -1 {
-			IntentionFiles.Set(intention.Path, intention.Content)
-		}
-	}
-	FilesInRealms = lo.Filter(FilesInRealms, func(file *config.FileData, i int) bool {
-		return strings.LastIndex(file.Path, ".evointention") == -1
-	})
 }
 
 func AutoSaveSharedMemory() {

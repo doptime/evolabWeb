@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"strings"
 
 	"github.com/doptime/evolab"
 	"github.com/doptime/evolab/mem"
@@ -16,8 +17,11 @@ func main() {
 	memoryjson, _ := json.Marshal(mem.SharedMemory)
 	fmt.Println(string(memoryjson))
 	errorgroup, _ := errgroup.WithContext(context.Background())
-
-	for k, v := range mem.IntentionFiles.Items() {
+	items := mem.IntentionFiles.Items()
+	for k, v := range items {
+		if strings.Contains(k, ".done") {
+			continue
+		}
 		fmt.Println("Analyzing Intention:", k, "...")
 		errorgroup.Go(func() (err error) {
 			var param map[string]any = map[string]any{"Intention": v}

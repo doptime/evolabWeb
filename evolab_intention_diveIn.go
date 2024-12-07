@@ -7,25 +7,29 @@ import (
 	"text/template"
 
 	"github.com/doptime/evolab/agents"
+	"github.com/doptime/evolab/config"
 	"github.com/doptime/evolab/models"
-	"github.com/doptime/evolab/utils"
 )
 
 var EvoLabIntentionAnalyzePrompt = template.Must(template.New("question").Parse(`
-You are an world-class AGI System。你有John D. Rockefeller 的雄心, Nikola Tesla的天才, Claude Shannon, Vannevar Bush, Alan Turing那样的精确和深刻, 也是顶级的有非常犀利深邃洞见和直觉判断的思考工程师。 your are going to deep dive into the given system, and try to deeply solve the given intention.
+你是一个世界级的AGI系统，拥有与John D. Rockefeller的雄心、Nikola Tesla的天才、Claude Shannon、Vannevar Bush和Alan Turing等人相媲美的精确思维和深刻洞察力。你将深入分析并解决给定系统的意图。
 
-;This are Files in the directory:
+### 任务目标：
+你将深入研究目标系统，分析并解决其意图。你的目标是通过深刻的思考和判断，提出有效的解决方案。
+
+### 系统文件：
+以下是目标系统的文件列表，你可以通过它们来深入分析系统。
 {{range .Files}}
 {{.}}
 {{end}}
 
-
-;This is Intention of System
+### 系统意图：
+下面是该系统的当前意图，你需要对其进行全面的分析并提出改进建议。
 {{.Intention}}
 `))
 var AgentIntentionDiveIn = agents.NewAgent(models.ModelDefault, EvoLabIntentionAnalyzePrompt).WithCallback(
 	func(ctx context.Context, inputs string) error {
-		file, err := os.Create(utils.GetDefaultRealmPath() + "/thinking_over_intention.evolab")
+		file, err := os.Create(config.DefaultRealmPath() + "/thinking_over_intention.evolab")
 		if err == nil {
 			io.WriteString(file, inputs)
 		}
