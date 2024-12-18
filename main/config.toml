@@ -35,7 +35,7 @@ SkipDirs = "doc,.git,.idea,.vscode,.evolab"
 
 [[EvoRealms]]
 Name = "doptime"
-Enable = true
+Enable = false
 RootPath = "/Users/yang/doptime/doptime"
 SkipFiles = ".DS_Store,.gitignore,.mod,.sum"
 SkipDirs = ".git,.idea,.vscode,3rd_lang,DockerFile,test,.evolab"
@@ -53,5 +53,13 @@ Enable = false
 RootPath = "/Users/yang/aircraft/wing"
 SkipFiles = ".DS_Store,.gitignore,.mod,.sum,expired_ideas.md"
 SkipDirs = ".git,.idea,.vscode,.evolab"
+
+[[EvoRealms]]
+Name = "btctrade"
+Enable = true
+RootPath = "/Users/yang/btctrade"
+SkipFiles = ".DS_Store,.gitignore,.mod,.sum,expired_ideas.md"
+SkipDirs = ".git,.idea,.vscode,.evolab,.ignored"
+
 
 

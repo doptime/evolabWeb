@@ -11,6 +11,7 @@ import (
 	"github.com/doptime/evolab/mem"
 	"github.com/doptime/evolab/models"
 	openai "github.com/sashabaranov/go-openai"
+	"golang.design/x/clipboard"
 )
 
 // GoalProposer is responsible for proposing goals using an OpenAI model,
@@ -20,6 +21,8 @@ type Agent struct {
 	Prompt               *template.Template
 	Tools                []openai.Tool
 	SaveResponseToMemory string
+	SaveResponseToFile   string
+	copyPromptOnly       bool
 	CallBack             func(ctx context.Context, inputs string) error
 }
 
@@ -34,8 +37,16 @@ func (a *Agent) WithSaveResponseToLocalMemory(memoryKey string) *Agent {
 	a.SaveResponseToMemory = memoryKey
 	return a
 }
+func (a *Agent) WithSaveResponseToLocalFile(filename string) *Agent {
+	a.SaveResponseToFile = filename
+	return a
+}
 func (a *Agent) WithCallback(callback func(ctx context.Context, inputs string) error) *Agent {
 	a.CallBack = callback
+	return a
+}
+func (a *Agent) CopyPromptOnly() *Agent {
+	a.copyPromptOnly = true
 	return a
 }
 
@@ -69,12 +80,18 @@ func (a *Agent) Call(ctx context.Context, memories ...map[string]any) (err error
 		},
 		Tools: a.Tools,
 	}
+	if a.copyPromptOnly {
+		fmt.Println("copy prompt to clipboard", promptBuffer.String())
+		clipboard.Write(clipboard.FmtText, promptBuffer.Bytes())
+		return nil
+	}
 
 	// Send the request to the OpenAI API
 	resp, err := a.Model.Client.CreateChatCompletion(ctx, req)
 	fmt.Println("resp:", resp)
 	if err != nil {
 		fmt.Println("Error creating chat completion:", err)
+		fmt.Println("req:", req.Messages[0].Content)
 		return err
 	}
 	if a.CallBack != nil {
@@ -82,6 +99,9 @@ func (a *Agent) Call(ctx context.Context, memories ...map[string]any) (err error
 	}
 	if a.SaveResponseToMemory != "" && len(memories) > 0 {
 		memories[0][a.SaveResponseToMemory] = resp.Choices[0].Message.Content
+	}
+	if a.SaveResponseToFile != "" && len(resp.Choices) > 0 {
+		saveToFile(&SaveToFile{Filename: a.SaveResponseToFile, Content: resp.Choices[0].Message.Content})
 	}
 	// Process each choice in the response
 	var toolCalls []openai.ToolCall

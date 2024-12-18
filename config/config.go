@@ -26,13 +26,16 @@ type FileData struct {
 	Content string
 }
 
+func (f *FileData) RealmName() string {
+	return strings.Replace(f.Path, f.Realm.RootPath, f.Realm.Name, -1)
+}
+
 func (f *FileData) String() string {
-	realmfilename := strings.Replace(f.Path, f.Realm.RootPath, f.Realm.Name, -1)
-	return "\n\n;Path: " + realmfilename + "\nContent: " + f.Content
+	return "\n\n;Path: " + f.RealmName() + "\nContent: " + f.Content
 }
 func DefaultRealmPath() string {
 	for _, realm := range EvoRealms {
-		if len(realm.Name) > 0 {
+		if len(realm.Name) > 0 && realm.Enable {
 			return realm.RootPath
 		}
 	}

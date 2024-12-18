@@ -2,36 +2,30 @@ package main
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/doptime/evolab"
-	"github.com/doptime/evolab/mem"
-	"golang.org/x/sync/errgroup"
+	"github.com/doptime/evolab/models"
 )
 
+type TestStruct struct {
+	Name string `case:"lower" trim:"left"`
+	Age  int    `min:"18" max:"60"`
+}
+
 func main() {
-
-	go mem.AutoSaveSharedMemory()
-	memoryjson, _ := json.Marshal(mem.SharedMemory)
-	fmt.Println(string(memoryjson))
-	errorgroup, _ := errgroup.WithContext(context.Background())
-	items := mem.IntentionFiles.Items()
-	for k, v := range items {
-		if strings.Contains(k, ".done") {
-			continue
-		}
-		fmt.Println("Analyzing Intention:", k, "...")
-		errorgroup.Go(func() (err error) {
-			var param map[string]any = map[string]any{"Intention": v}
-
-			evolab.AgentIntentionDiveIn.Call(context.Background(), param)
-			evolab.AgentIntentionSave.Call(context.Background(), param)
-			return nil
-		})
-
+	//go mem.AutoSaveSharedMemory()
+	args := os.Args
+	argsString := strings.Join(args, " ")
+	if strings.Contains(argsString, "save") {
+		evolab.AgentIntentionSaveToFileCall()
+	} else if strings.Contains(argsString, "minq") {
+		fmt.Println("minq using ModelQwen72BLocal", models.ModelNameQwen72BLocal)
+		evolab.GenQWithMinimalFiles()
+	} else if strings.Contains(argsString, "q") {
+		evolab.AgentIntentionSolve.Call(context.Background(), map[string]any{})
 	}
-	errorgroup.Wait()
 
 }

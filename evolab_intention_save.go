@@ -1,32 +1,45 @@
 package evolab
 
 import (
+	"context"
 	"text/template"
 
 	"github.com/doptime/evolab/agents"
 	"github.com/doptime/evolab/models"
+	"golang.design/x/clipboard"
 )
 
-var EvoLabIntentionSavePrompt = template.Must(template.New("question").Parse(`
-你是一个世界级的AGI系统，目标是改进指定的目标系统。以下是相关信息：
+var AgentIntentionSaveToFile = agents.NewAgent(models.ModelQwen72BLocal, template.Must(template.New("question").Parse(`
+你是一个专注于改进目系统的AGI助手。你能够访问当前系统的文件内容。也可以看到对当前系统的改进措施。请把整理改进内容并保存到文件系统当中。
 
-1. **目标系统文件**：
-   目标系统的文件列表如下，你可以在这些文件中查找与改进相关的内容。
-   {{range .Files}}
-   {{.}}
-   {{end}}
+### 系统意图：
+系统意图定义在!system_goal_align.md文件当中，它包含许多条意图。你的目标是按照 !system_goal_align.md 文件中的描述 依次实现下一个未被标定为已实现的目标。
 
-2. **目标系统意图**：
-   以下是目标系统当前的意图。你已经在之前的系统调用中分析过这个意图。
-   {{.Intention}}
+### 系统文件：
+以下是目标系统的文件列表，你可以通过它们来深入分析系统。
+{{range .Files}}
+{{.}}
+{{end}}
 
-3. **前期工作总结**：
-   以下是你在之前工作中分析和处理的内容。你需要整理并总结这些信息，以便最终改进目标系统的意图。
-   {{.IntentionDiveIn}}
+### 系统文件：
+以下是目标系统的文件列表，你可以通过它们来深入分析系统。
+{{.modifications}}
 
-4. **下一步操作**：
-   现在，请调用提供的 FunctionCall / tool_call 以保存并整理结果到文件中，为提交最终版本的目标系统意图解决方案做好准备。   
-   如果找不到更合适的目标名称时，可以把回答保存在.purposedone文件中。
+### 新的改进：
+以下是对目标系统的新改进，请通过调用 FunctionCall / tool_call ，把整理后的最终目标意图保存到文件中。
+如果涉及多个文件，请多次调用 FunctionCall / tool_call，每次调用都相应保存到不同的文件中。
 
-`))
-var AgentIntentionSave = agents.NewAgent(models.ModelQwen32B, EvoLabIntentionSavePrompt, agents.SaveStringToFile.Tool)
+请把修改后的文件用.new 作为扩展名，避免不必要的覆盖。
+
+`)), agents.SaveStringToFile.Tool)
+
+func AgentIntentionSaveToFileCall() {
+	var param map[string]any = map[string]any{}
+	textbytes := clipboard.Read(clipboard.FmtText)
+	if len(textbytes) == 0 {
+		return
+	}
+
+	param["modifications"] = string(textbytes)
+	AgentIntentionSaveToFile.Call(context.Background(), param)
+}
