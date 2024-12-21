@@ -22,4 +22,4 @@ var EvoLabIntentionSolvePrompt = template.Must(template.New("question").Parse(`
 `))
 
 var AgentIntentionSolve = agents.NewAgent(models.ModelQwQ32B, EvoLabIntentionSolvePrompt, agents.SaveStringToFile.Tool).
-	WithSaveResponseToLocalFile("IntentionSolved.md").CopyPromptOnly()
+	WitheMsgDeFile("IntentionSolved.md").CopyPromptOnly()

@@ -10,7 +10,7 @@ import (
 )
 
 type ToolCallInterface interface {
-	HandleFunctionCall(Param string) (err error)
+	HandleFunctionCall(Param interface{}) (err error)
 }
 
 var ToolMap = make(map[string]ToolCallInterface)
@@ -26,13 +26,23 @@ func (t *Tool[v]) WithMemoryCacheKey(key string) *Tool[v] {
 	t.MemoryCacheKey = key
 	return t
 }
-func (t *Tool[v]) HandleFunctionCall(Param string) (err error) {
+func (t *Tool[v]) HandleFunctionCall(Param interface{}) (err error) {
+	var parambytes []byte
+	if str, ok := Param.(string); ok {
+		parambytes = []byte(str)
+	} else {
+		parambytes, err = json.Marshal(Param)
+		if err != nil {
+			log.Printf("Error parsing arguments for tool %s: %v", t.Tool.Function.Name, err)
+		}
+	}
+
 	var val v
 	vType := reflect.TypeOf(val) // Decode escaped Unicode in Param
 	if vType.Kind() == reflect.Ptr {
 		// Create a new instance of the pointed type
 		valPtr := reflect.New(vType.Elem()).Interface()
-		err = json.Unmarshal([]byte(Param), valPtr)
+		err = json.Unmarshal(parambytes, valPtr)
 		if err != nil {
 			log.Printf("Error parsing arguments for tool %s: %v", t.Tool.Function.Name, err)
 			return err
@@ -42,7 +52,7 @@ func (t *Tool[v]) HandleFunctionCall(Param string) (err error) {
 		val = reflect.ValueOf(valPtr).Interface().(v)
 	} else {
 		// Unmarshal directly into val
-		err = json.Unmarshal([]byte(Param), &val)
+		err = json.Unmarshal(parambytes, &val)
 		if err != nil {
 			log.Printf("Error parsing arguments for tool %s: %v", t.Tool.Function.Name, err)
 			return err

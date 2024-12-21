@@ -44,7 +44,7 @@ var AgentIntentionDiveIn = agents.NewAgent(models.ModelQwQ32B, EvoLabIntentionAn
 		}
 		defer file.Close()
 		return nil
-	}).WithSaveResponseToLocalMemory("IntentionDiveIn")
+	}).WithMsgToMemory("IntentionDiveIn")
 
 var EvoLabIntentionSavePrompt = template.Must(template.New("question").Parse(`
 你是一个世界级的AGI系统，旨在深度演进目标系统，使得目标系统具有世界级竞争力。你现在正以一次改善一个目标意图的方式来改进目标系统。

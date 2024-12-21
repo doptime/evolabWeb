@@ -1,9 +1,11 @@
 package agents
 
 import (
+	"fmt"
 	"io"
 	"os"
 	"strings"
+	"time"
 
 	"github.com/doptime/evolab/config"
 )
@@ -14,6 +16,11 @@ type SaveToFile struct {
 }
 
 func getLocalFileName(filename string) string {
+	if strings.Contains(filename, ".Now") {
+		//replace .Now with time format "yyyy-MM-dd-HH-mm"
+		var timeFormat = "2006-01-02-15-04"
+		filename = strings.Replace(filename, ".Now", "."+time.Now().Format(timeFormat), 1)
+	}
 	for _, c := range config.EvoRealms {
 		if ind := strings.Index(filename, c.Name); ind == 0 {
 			filename = strings.Replace(filename, c.Name, c.RootPath, 1)
@@ -35,6 +42,7 @@ func saveToFile(param *SaveToFile) {
 	}
 	defer file.Close()
 	io.WriteString(file, param.Content)
+	fmt.Println("A file saved: ", filename)
 
 }
 

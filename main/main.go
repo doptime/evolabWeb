@@ -2,12 +2,10 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"strings"
 
 	"github.com/doptime/evolab"
-	"github.com/doptime/evolab/models"
 )
 
 type TestStruct struct {
@@ -19,13 +17,14 @@ func main() {
 	//go mem.AutoSaveSharedMemory()
 	args := os.Args
 	argsString := strings.Join(args, " ")
-	if strings.Contains(argsString, "save") {
-		evolab.AgentIntentionSaveToFileCall()
-	} else if strings.Contains(argsString, "minq") {
-		fmt.Println("minq using ModelQwen72BLocal", models.ModelNameQwen72BLocal)
-		evolab.GenQWithMinimalFiles()
-	} else if strings.Contains(argsString, "q") {
+	if strings.Contains(argsString, "2filereq") {
+		evolab.AgentSaveToFileRequest.Call(context.Background(), map[string]any{})
+	} else if strings.Contains(argsString, "2file") {
+		evolab.AgentIntentionSaveUseSourceClipboard.Call(context.Background(), map[string]any{})
+	} else if strings.Contains(argsString, "req") {
 		evolab.AgentIntentionSolve.Call(context.Background(), map[string]any{})
+	} else if strings.Contains(argsString, "2f") || true {
+		evolab.AgentModificationSaveToFile.Call(context.Background(), map[string]any{})
 	}
 
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/doptime/evolab/mem"
 	"github.com/doptime/evolab/models"
+	"github.com/samber/lo"
 	openai "github.com/sashabaranov/go-openai"
 	"golang.design/x/clipboard"
 )
@@ -17,13 +18,17 @@ import (
 // GoalProposer is responsible for proposing goals using an OpenAI model,
 // handling function calls, and managing callbacks.
 type Agent struct {
-	Model                models.Model
-	Prompt               *template.Template
-	Tools                []openai.Tool
-	SaveResponseToMemory string
-	SaveResponseToFile   string
-	copyPromptOnly       bool
-	CallBack             func(ctx context.Context, inputs string) error
+	Model            models.Model
+	Prompt           *template.Template
+	Tools            []openai.Tool
+	msgToMemKey      string
+	msgDeFile        string
+	msgToFile        string
+	msgDeCliboard    bool
+	memDeCliboardKey string
+	toolsInPrompt    bool
+	copyPromptOnly   bool
+	CallBack         func(ctx context.Context, inputs string) error
 }
 
 func NewAgent(llm models.Model, prompt *template.Template, tools ...openai.Tool) *Agent {
@@ -33,14 +38,31 @@ func NewAgent(llm models.Model, prompt *template.Template, tools ...openai.Tool)
 		Tools:  tools,
 	}
 }
-func (a *Agent) WithSaveResponseToLocalMemory(memoryKey string) *Agent {
-	a.SaveResponseToMemory = memoryKey
+func (a *Agent) WithMsgToMemory(memoryKey string) *Agent {
+	a.msgToMemKey = memoryKey
 	return a
 }
-func (a *Agent) WithSaveResponseToLocalFile(filename string) *Agent {
-	a.SaveResponseToFile = filename
+func (a *Agent) WitheMsgDeFile(filename string) *Agent {
+	a.msgDeFile = getLocalFileName(filename)
 	return a
 }
+func (a *Agent) WithMsgToFile(filename string) *Agent {
+	a.msgToFile = getLocalFileName(filename)
+	return a
+}
+func (a *Agent) WithMsgDeClipboard() *Agent {
+	a.msgDeCliboard = true
+	return a
+}
+func (a *Agent) WithMemDeClipboard(memoryKey string) *Agent {
+	a.memDeCliboardKey = memoryKey
+	return a
+}
+func (a *Agent) WithToolsInPrompt() *Agent {
+	a.toolsInPrompt = true
+	return a
+}
+
 func (a *Agent) WithCallback(callback func(ctx context.Context, inputs string) error) *Agent {
 	a.CallBack = callback
 	return a
@@ -63,6 +85,15 @@ func (a *Agent) Call(ctx context.Context, memories ...map[string]any) (err error
 			params[k] = v
 		}
 	}
+	if a.memDeCliboardKey != "" {
+		textbytes := clipboard.Read(clipboard.FmtText)
+		if len(textbytes) == 0 {
+			fmt.Println("no data in clipboard")
+			return nil
+		}
+		params[a.memDeCliboardKey] = string(textbytes)
+	}
+
 	var promptBuffer bytes.Buffer
 	if err := a.Prompt.Execute(&promptBuffer, params); err != nil {
 		fmt.Printf("Error rendering prompt: %v\n", err)
@@ -80,14 +111,20 @@ func (a *Agent) Call(ctx context.Context, memories ...map[string]any) (err error
 		},
 		Tools: a.Tools,
 	}
-	if a.copyPromptOnly {
-		fmt.Println("copy prompt to clipboard", promptBuffer.String())
-		clipboard.Write(clipboard.FmtText, promptBuffer.Bytes())
-		return nil
+
+	if a.toolsInPrompt && len(a.Tools) > 0 {
+		tools, _ := json.Marshal(map[string]any{"functions": lo.Map(a.Tools, func(tool openai.Tool, i int) *openai.FunctionDefinition {
+			return tool.Function
+		})})
+		req.Messages[0].Content = req.Messages[0].Content + "\n" + string(tools)
 	}
 
-	// Send the request to the OpenAI API
-	resp, err := a.Model.Client.CreateChatCompletion(ctx, req)
+	if a.copyPromptOnly {
+		fmt.Println("copy prompt to clipboard", req.Messages[0].Content)
+		clipboard.Write(clipboard.FmtText, []byte(req.Messages[0].Content))
+		return nil
+	}
+	resp, err := a.GetResponse(req)
 	fmt.Println("resp:", resp)
 	if err != nil {
 		fmt.Println("Error creating chat completion:", err)
@@ -97,16 +134,24 @@ func (a *Agent) Call(ctx context.Context, memories ...map[string]any) (err error
 	if a.CallBack != nil {
 		a.CallBack(ctx, resp.Choices[0].Message.Content)
 	}
-	if a.SaveResponseToMemory != "" && len(memories) > 0 {
-		memories[0][a.SaveResponseToMemory] = resp.Choices[0].Message.Content
-	}
-	if a.SaveResponseToFile != "" && len(resp.Choices) > 0 {
-		saveToFile(&SaveToFile{Filename: a.SaveResponseToFile, Content: resp.Choices[0].Message.Content})
+	if a.msgToMemKey != "" && len(memories) > 0 {
+		memories[0][a.msgToMemKey] = resp.Choices[0].Message.Content
 	}
 	// Process each choice in the response
-	var toolCalls []openai.ToolCall
+	type FunctionCall struct {
+		Name string `json:"name,omitempty"`
+		// call function with arguments in JSON format
+		Arguments any `json:"arguments,omitempty"`
+	}
+	var toolCalls []*FunctionCall
 	for _, choice := range resp.Choices {
-		toolCalls = append(toolCalls, choice.Message.ToolCalls...)
+		for _, toolcall := range choice.Message.ToolCalls {
+			functioncall := &FunctionCall{
+				Name:      toolcall.Function.Name,
+				Arguments: toolcall.Function.Arguments,
+			}
+			toolCalls = append(toolCalls, functioncall)
+		}
 	}
 	if len(toolCalls) == 0 && len(resp.Choices) > 0 {
 		rsp := resp.Choices[0].Message.Content
@@ -118,35 +163,27 @@ func (a *Agent) Call(ctx context.Context, memories ...map[string]any) (err error
 			items = items[1 : len(items)-1]
 		}
 		for _, toolcallString := range items {
-			type FunctionCall struct {
-				Name string `json:"name,omitempty"`
-				// call function with arguments in JSON format
-				Arguments any `json:"arguments,omitempty"`
-			}
 			if i := strings.Index(toolcallString, "{"); i > 0 {
 				toolcallString = toolcallString[i:]
 			}
 			if i := strings.LastIndex(toolcallString, "}"); i > 0 && i < len(toolcallString)-1 {
 				toolcallString = toolcallString[:i+1]
 			}
-			tool := FunctionCall{Arguments: map[string]any{}}
-			toolcall := openai.ToolCall{Type: "function", Function: openai.FunctionCall{}}
+			tool := FunctionCall{Name: "", Arguments: map[string]any{}}
 			//openai.FunctionCall 中的Arguments是string类型.直接unmrshal 会报错
-			if err := json.Unmarshal([]byte(toolcallString), &tool); err == nil && tool.Name != "" && tool.Arguments != nil {
-				argument, _ := json.Marshal(tool.Arguments)
-				toolcall.Function.Name, toolcall.Function.Arguments = tool.Name, string(argument)
-				toolCalls = append(toolCalls, toolcall)
+			err := json.Unmarshal([]byte(toolcallString), &tool)
+			if err == nil && tool.Name != "" && tool.Arguments != nil {
+				toolCalls = append(toolCalls, &tool)
 			}
 		}
 	}
 
 	for _, toolcall := range toolCalls {
-
-		tool, ok := ToolMap[toolcall.Function.Name]
+		tool, ok := ToolMap[toolcall.Name]
 		if !ok {
 			return fmt.Errorf("error: function not found in FunctionMap")
 		}
-		tool.HandleFunctionCall(toolcall.Function.Arguments)
+		tool.HandleFunctionCall(toolcall.Arguments)
 	}
 
 	return nil
