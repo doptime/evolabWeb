@@ -29,7 +29,7 @@ var AgentIntentionSolveWithMinimalFiles = agents.NewAgent(models.ModelDefault, t
 
 注意 "PickFileNames" 函数的 Category 请设置为 ”ContextFiles“
 `)), agents.StoreFilenamesToMemory.Tool).
-	WitheMsgDeFile("IntentionSolved.md").CopyPromptOnly()
+	WithMsgDeFile("IntentionSolved.md").CopyPromptOnly()
 
 func GenQWithMinimalFiles() {
 	AgentIntentionSolveWithMinimalFiles.Call(context.Background(), map[string]any{})
@@ -63,7 +63,7 @@ func GenQWithMinimalFiles() {
 	{{.}}
 	{{end}}
 	
-	`)), agents.SaveStringToFile.Tool).WitheMsgDeFile("IntentionSolved.md").CopyPromptOnly()
+	`)), agents.SaveStringToFile.Tool).WithMsgDeFile("IntentionSolved.md").CopyPromptOnly()
 
 	AgentIntentionSolve.Call(context.Background(), map[string]any{})
 

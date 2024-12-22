@@ -24,7 +24,9 @@ func main() {
 	} else if strings.Contains(argsString, "req") {
 		evolab.AgentIntentionSolve.Call(context.Background(), map[string]any{})
 	} else if strings.Contains(argsString, "2f") || true {
-		evolab.AgentModificationSaveToFile.Call(context.Background(), map[string]any{})
+		evolab.AgentModificationSaveToFile.
+			//WithMemDeClipboard("modifications")
+			WithMsgToFile("doc_modifications.md").Call(context.Background(), map[string]any{})
 	}
 
 }

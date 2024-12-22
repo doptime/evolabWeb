@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 
+	"github.com/doptime/evolab/utils"
 	openai "github.com/sashabaranov/go-openai"
 	"golang.design/x/clipboard"
 )
@@ -14,12 +14,7 @@ func (a *Agent) GetResponse(req openai.ChatCompletionRequest) (resp openai.ChatC
 
 	// Send the request to the OpenAI API
 	if a.msgDeFile != "" {
-		filename := getLocalFileName(a.msgDeFile)
-		data, err := os.ReadFile(filename)
-		if err != nil {
-			fmt.Println("Error reading file:", err)
-		}
-		err = json.Unmarshal(data, &resp)
+		resp, err = utils.FileToResponse(a.msgDeFile)
 		return resp, err
 	}
 	if a.msgDeCliboard {
@@ -46,10 +41,10 @@ func (a *Agent) GetResponse(req openai.ChatCompletionRequest) (resp openai.ChatC
 		resp, err = a.Model.Client.CreateChatCompletion(ctx, req)
 	}
 
-	if a.msgDeFile != "" && len(resp.Choices) > 0 {
-		msgpackbytes, err := json.Marshal(resp.Choices[0])
+	if a.msgToFile != "" && len(resp.Choices) > 0 {
+		jsonbytes, err := json.Marshal(resp)
 		if err == nil {
-			saveToFile(&SaveToFile{Filename: a.msgDeFile, Content: string(msgpackbytes)})
+			saveToFile(&SaveToFile{Filename: a.msgToFile, Content: string(jsonbytes)})
 		}
 	}
 	return resp, err

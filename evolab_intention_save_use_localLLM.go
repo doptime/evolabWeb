@@ -11,7 +11,7 @@ var AgentModificationSaveToFile = agents.NewAgent(models.ModelDefault, template.
 你是一个专注于改进目系统的AGI助手。你能够访问当前系统的文件内容。也可以看到对当前系统的改进措施。请把整理改进内容并保存到文件系统当中。
 
 ### 系统意图：
-系统意图定义在!system_goal_align.md文件当中，它包含许多条意图。你的目标是按照 !system_goal_align.md 文件中的描述 依次实现下一个未被标定为已实现的目标。
+系统意图定义在!system_goal_align.md文件当中，它包含许多条意图。你的目标是按照 !system_goal_align.md 文件中的描述 依次实现下一个未实现的目标。
 
 ---
 
@@ -37,4 +37,5 @@ var AgentModificationSaveToFile = agents.NewAgent(models.ModelDefault, template.
 	- 对删除文件情形的,文件名用.del 作为扩展名，避免不必要的覆盖。
 	- 对修改意见仅涉及部分文件内容修改的. 请注意修改后的文件内容需要完整保留除了修改处的其余部分.避免意外丢失内容.
 
-`)), agents.SaveStringToFile.Tool).WithMemDeClipboard("modifications")
+`)), agents.SaveStringToFile.Tool).
+	WithModel(models.ModelQwen32BCoderLocal)

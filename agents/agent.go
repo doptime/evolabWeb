@@ -10,10 +10,16 @@ import (
 
 	"github.com/doptime/evolab/mem"
 	"github.com/doptime/evolab/models"
+	"github.com/doptime/evolab/utils"
 	"github.com/samber/lo"
 	openai "github.com/sashabaranov/go-openai"
 	"golang.design/x/clipboard"
 )
+
+type FileToMem struct {
+	File string `json:"file"`
+	Mem  string `json:"mem"`
+}
 
 // GoalProposer is responsible for proposing goals using an OpenAI model,
 // handling function calls, and managing callbacks.
@@ -22,6 +28,7 @@ type Agent struct {
 	Prompt           *template.Template
 	Tools            []openai.Tool
 	msgToMemKey      string
+	fileToMem        *FileToMem
 	msgDeFile        string
 	msgToFile        string
 	msgDeCliboard    bool
@@ -38,16 +45,20 @@ func NewAgent(llm models.Model, prompt *template.Template, tools ...openai.Tool)
 		Tools:  tools,
 	}
 }
-func (a *Agent) WithMsgToMemory(memoryKey string) *Agent {
+func (a *Agent) WithFileToMem(filename, memoryKey string) *Agent {
+	a.fileToMem = &FileToMem{File: filename, Mem: memoryKey}
+	return a
+}
+func (a *Agent) WithMsgToMem(memoryKey string) *Agent {
 	a.msgToMemKey = memoryKey
 	return a
 }
-func (a *Agent) WitheMsgDeFile(filename string) *Agent {
-	a.msgDeFile = getLocalFileName(filename)
+func (a *Agent) WithMsgDeFile(filename string) *Agent {
+	a.msgDeFile = filename
 	return a
 }
 func (a *Agent) WithMsgToFile(filename string) *Agent {
-	a.msgToFile = getLocalFileName(filename)
+	a.msgToFile = filename
 	return a
 }
 func (a *Agent) WithMsgDeClipboard() *Agent {
@@ -60,6 +71,10 @@ func (a *Agent) WithMemDeClipboard(memoryKey string) *Agent {
 }
 func (a *Agent) WithToolsInPrompt() *Agent {
 	a.toolsInPrompt = true
+	return a
+}
+func (a *Agent) WithModel(Model models.Model) *Agent {
+	a.Model = Model
 	return a
 }
 
@@ -92,6 +107,12 @@ func (a *Agent) Call(ctx context.Context, memories ...map[string]any) (err error
 			return nil
 		}
 		params[a.memDeCliboardKey] = string(textbytes)
+	}
+	if a.fileToMem != nil {
+		resp, err := utils.FileToResponse(a.fileToMem.File)
+		if err == nil {
+			params[a.fileToMem.Mem] = resp.Choices[0].Message.Content
+		}
 	}
 
 	var promptBuffer bytes.Buffer
