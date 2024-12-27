@@ -31,7 +31,7 @@ func (f *FileData) RealmName() string {
 }
 
 func (f *FileData) String() string {
-	return "\n\n;Path: " + f.RealmName() + "\nContent: " + f.Content
+	return "\n\nPath: " + f.RealmName() + "\nContent: \n" + f.Content + "\nEOF\n"
 }
 func DefaultRealmPath() string {
 	for _, realm := range EvoRealms {

@@ -4,7 +4,6 @@ import (
 	"text/template"
 
 	"github.com/doptime/evolab/agents"
-	"github.com/doptime/evolab/models"
 )
 
 var EvoLabProposeAndSavePrompt = template.Must(template.New("question").Parse(`
@@ -40,4 +39,4 @@ $weightOfIntention 是你的目标系统意图的权重，1-100的数字。数�
 
 `))
 
-var AgentProposeAndSave = agents.NewAgent(models.ModelQwQ32B, EvoLabProposeAndSavePrompt, agents.SaveStringToFile.Tool).WithMsgDeFile("TaskRequirementProposed.md")
+var AgentProposeAndSave = agents.NewAgent(EvoLabProposeAndSavePrompt, agents.SaveStringToFile.Tool).WithMsgDeFile("TaskRequirementProposed.md")

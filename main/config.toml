@@ -35,14 +35,14 @@ SkipDirs = "doc,.git,.idea,.vscode,.evolab"
 
 [[EvoRealms]]
 Name = "doptimeutils"
-Enable = true
+Enable = false
 RootPath = "/Users/yang/doptime/doptime/utils"
 SkipFiles = ".DS_Store,.gitignore,.mod,.sum,.excalidraw,.png,.mdx,*.go"
 SkipDirs = ".git,.idea,.vscode,3rd_lang,DockerFile,test,.evolab,vars,"
 
 [[EvoRealms]]
 Name = "doptime"
-Enable = true
+Enable = false
 RootPath = "/Users/yang/doptime/doptime"
 SkipFiles = ".DS_Store,.gitignore,.mod,.sum,.excalidraw,.png,.mdx"
 SkipDirs = ".git,.idea,.vscode,3rd_lang,DockerFile,test,.evolab,vars,"
@@ -67,3 +67,18 @@ Enable = false
 RootPath = "/Users/yang/btctrade"
 SkipFiles = ".DS_Store,.gitignore,.mod,.sum,expired_ideas.md"
 SkipDirs = ".git,.idea,.vscode,.evolab,.ignored"
+
+[[EvoRealms]]
+Name = "learniverse"
+Enable = false
+RootPath = "/Users/yang/learniverse"
+SkipFiles = ".DS_Store,.gitignore,.mod,.sum,expired_ideas.md"
+SkipDirs = ".git,.idea,.vscode,.evolab,.ignored"
+
+[[EvoRealms]]
+Name = "doptime-client"
+Enable = true
+RootPath = "/Users/yang/doptime/doptime-client"
+SkipFiles = ".DS_Store,.gitignore,.mod,.sum,package-lock.json"
+SkipDirs = ".git,.idea,.vscode,.evolab,.ignored,node_modules,lib"
+

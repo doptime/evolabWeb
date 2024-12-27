@@ -6,7 +6,6 @@ import (
 	"text/template"
 
 	"github.com/doptime/evolab/agents"
-	"github.com/doptime/evolab/models"
 )
 
 type LinuxCommand struct {
@@ -50,4 +49,4 @@ Your work style ∈ { John D. Rockefeller, Andrew Carnegie, Henry Ford, Walt Dis
 {{.}}
 {{end}}
 `))
-var AgentEvolab = agents.NewAgent(models.ModelDefault, EvoLabPrompt)
+var AgentEvolab = agents.NewAgent(EvoLabPrompt)

@@ -2,10 +2,10 @@ package main
 
 import (
 	"context"
-	"os"
 	"strings"
 
 	"github.com/doptime/evolab"
+	"github.com/doptime/evolab/models"
 )
 
 type TestStruct struct {
@@ -15,18 +15,19 @@ type TestStruct struct {
 
 func main() {
 	//go mem.AutoSaveSharedMemory()
-	args := os.Args
-	argsString := strings.Join(args, " ")
-	if strings.Contains(argsString, "2filereq") {
-		evolab.AgentSaveToFileRequest.Call(context.Background(), map[string]any{})
-	} else if strings.Contains(argsString, "2file") {
-		evolab.AgentIntentionSaveUseSourceClipboard.Call(context.Background(), map[string]any{})
-	} else if strings.Contains(argsString, "req") {
-		evolab.AgentIntentionSolve.Call(context.Background(), map[string]any{})
-	} else if strings.Contains(argsString, "2f") || true {
-		evolab.AgentModificationSaveToFile.
-			//WithMemDeClipboard("modifications")
-			WithMsgToFile("doc_modifications.md").Call(context.Background(), map[string]any{})
+	//argsString := strings.Join(os.Args, " ")
+	argsString := "accomplish"
+	if strings.Contains(argsString, "modification2f") {
+		evolab.AgentModification2File.WithModel(models.ModelQwen32B).
+			WithMsgToFile("Beforecommittofile.json").
+			WithFileToMem("IntentionSolved.md", "modifications").Call(context.Background(), map[string]any{})
+	} else if strings.Contains(argsString, "accomplish") {
+		evolab.AgentIntentionAccomplish.WithModel(models.ModelDeepseek).WithMsgContentToFile("accomplishContent.md").
+			WithMsgToFile("accomplish.md").Call(context.Background(), map[string]any{})
+
+	} else if strings.Contains(argsString, "goalgen") {
+		evolab.AgentIntentionGen.WithModel(models.ModelQwenQvq72BLocal).
+			WithMsgToFile("goalgen.json").Call(context.Background(), map[string]any{})
 	}
 
 }

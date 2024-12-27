@@ -4,7 +4,6 @@ import (
 	"text/template"
 
 	"github.com/doptime/evolab/agents"
-	"github.com/doptime/evolab/models"
 )
 
 var EvoLabIntentionProposePrompt = template.Must(template.New("question").Parse(`
@@ -34,7 +33,7 @@ var EvoLabIntentionProposePrompt = template.Must(template.New("question").Parse(
 最多同时保存2个目标。如果你不能再有限的上下文内完成对目标的讨论或展望，请在更长的上下文当中完成。
 
 `))
-var AgentIntentionPropose = agents.NewAgent(models.ModelQwQ32B, EvoLabIntentionProposePrompt).WithMsgToMem("IntentionDiveIn")
+var AgentIntentionPropose = agents.NewAgent(EvoLabIntentionProposePrompt).WithMsgToMem("IntentionDiveIn")
 
 var EvoLabGoalSavePrompt = template.Must(template.New("question").Parse(`
 你是一个世界级的AGI系统，旨在深度演进目标系统，使得目标系统具有世界级竞争力。你现在正以一次改善一个目标意图的方式来改进目标系统。
@@ -59,4 +58,4 @@ var EvoLabGoalSavePrompt = template.Must(template.New("question").Parse(`
    $weightOfIntention是你的目标系统意图的权重，1-100的数字。数字越大，意图越重要。
    
 `))
-var AgentIntentionGoalSave = agents.NewAgent(models.ModelQwen32B, EvoLabGoalSavePrompt, agents.SaveStringToFile.Tool)
+var AgentIntentionGoalSave = agents.NewAgent(EvoLabGoalSavePrompt, agents.SaveStringToFile.Tool)

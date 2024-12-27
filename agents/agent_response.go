@@ -41,11 +41,13 @@ func (a *Agent) GetResponse(req openai.ChatCompletionRequest) (resp openai.ChatC
 		resp, err = a.Model.Client.CreateChatCompletion(ctx, req)
 	}
 
-	if a.msgToFile != "" && len(resp.Choices) > 0 {
-		jsonbytes, err := json.Marshal(resp)
-		if err == nil {
+	if a.msgToFile != "" {
+		if jsonbytes, err := json.Marshal(resp); err == nil {
 			saveToFile(&SaveToFile{Filename: a.msgToFile, Content: string(jsonbytes)})
 		}
+	}
+	if a.msgContentToFile != "" && len(resp.Choices) > 0 {
+		saveToFile(&SaveToFile{Filename: a.msgContentToFile, Content: resp.Choices[0].Message.Content})
 	}
 	return resp, err
 }

@@ -5,7 +5,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"strings"
 	"text/template"
 
 	"github.com/doptime/evolab/mem"
@@ -24,26 +23,31 @@ type FileToMem struct {
 // GoalProposer is responsible for proposing goals using an OpenAI model,
 // handling function calls, and managing callbacks.
 type Agent struct {
-	Model            models.Model
-	Prompt           *template.Template
-	Tools            []openai.Tool
-	msgToMemKey      string
-	fileToMem        *FileToMem
-	msgDeFile        string
-	msgToFile        string
-	msgDeCliboard    bool
-	memDeCliboardKey string
-	toolsInPrompt    bool
-	copyPromptOnly   bool
-	CallBack         func(ctx context.Context, inputs string) error
+	Model              models.Model
+	Prompt             *template.Template
+	Tools              []openai.Tool
+	msgToMemKey        string
+	fileToMem          *FileToMem
+	msgDeFile          string
+	msgToFile          string
+	msgContentToFile   string
+	msgDeCliboard      bool
+	memDeCliboardKey   string
+	functioncallParser func(resp openai.ChatCompletionResponse) (toolCalls []*FunctionCall)
+
+	toolsInPrompt  bool
+	copyPromptOnly bool
+	CallBack       func(ctx context.Context, inputs string) error
 }
 
-func NewAgent(llm models.Model, prompt *template.Template, tools ...openai.Tool) *Agent {
-	return &Agent{
-		Model:  llm,
+func NewAgent(prompt *template.Template, tools ...openai.Tool) (a *Agent) {
+	a = &Agent{
+		Model:  models.ModelDefault,
 		Prompt: prompt,
 		Tools:  tools,
 	}
+	a.WithToolcallParser(nil)
+	return a
 }
 func (a *Agent) WithFileToMem(filename, memoryKey string) *Agent {
 	a.fileToMem = &FileToMem{File: filename, Mem: memoryKey}
@@ -59,6 +63,10 @@ func (a *Agent) WithMsgDeFile(filename string) *Agent {
 }
 func (a *Agent) WithMsgToFile(filename string) *Agent {
 	a.msgToFile = filename
+	return a
+}
+func (a *Agent) WithMsgContentToFile(filename string) *Agent {
+	a.msgContentToFile = filename
 	return a
 }
 func (a *Agent) WithMsgDeClipboard() *Agent {
@@ -130,14 +138,16 @@ func (a *Agent) Call(ctx context.Context, memories ...map[string]any) (err error
 				Content: promptBuffer.String(),
 			},
 		},
-		Tools: a.Tools,
+		MaxTokens: 8192,
+		Tools:     a.Tools,
 	}
 
 	if a.toolsInPrompt && len(a.Tools) > 0 {
+		functioncallprompt := `For each function call, return a json object with function name and arguments within <tool_call></tool_call>\n`
 		tools, _ := json.Marshal(map[string]any{"functions": lo.Map(a.Tools, func(tool openai.Tool, i int) *openai.FunctionDefinition {
 			return tool.Function
 		})})
-		req.Messages[0].Content = req.Messages[0].Content + "\n" + string(tools)
+		req.Messages[0].Content = req.Messages[0].Content + "\n" + functioncallprompt + string(tools)
 	}
 
 	if a.copyPromptOnly {
@@ -158,47 +168,8 @@ func (a *Agent) Call(ctx context.Context, memories ...map[string]any) (err error
 	if a.msgToMemKey != "" && len(memories) > 0 {
 		memories[0][a.msgToMemKey] = resp.Choices[0].Message.Content
 	}
-	// Process each choice in the response
-	type FunctionCall struct {
-		Name string `json:"name,omitempty"`
-		// call function with arguments in JSON format
-		Arguments any `json:"arguments,omitempty"`
-	}
-	var toolCalls []*FunctionCall
-	for _, choice := range resp.Choices {
-		for _, toolcall := range choice.Message.ToolCalls {
-			functioncall := &FunctionCall{
-				Name:      toolcall.Function.Name,
-				Arguments: toolcall.Function.Arguments,
-			}
-			toolCalls = append(toolCalls, functioncall)
-		}
-	}
-	if len(toolCalls) == 0 && len(resp.Choices) > 0 {
-		rsp := resp.Choices[0].Message.Content
-		rsp = strings.ReplaceAll(rsp, "<tool>", "<tool_call>")
-		rsp = strings.ReplaceAll(rsp, "<tools>", "<tool_call>")
-		items := strings.Split(rsp, "<tool_call>")
-		//case json only
-		if len(items) > 3 {
-			items = items[1 : len(items)-1]
-		}
-		for _, toolcallString := range items {
-			if i := strings.Index(toolcallString, "{"); i > 0 {
-				toolcallString = toolcallString[i:]
-			}
-			if i := strings.LastIndex(toolcallString, "}"); i > 0 && i < len(toolcallString)-1 {
-				toolcallString = toolcallString[:i+1]
-			}
-			tool := FunctionCall{Name: "", Arguments: map[string]any{}}
-			//openai.FunctionCall 中的Arguments是string类型.直接unmrshal 会报错
-			err := json.Unmarshal([]byte(toolcallString), &tool)
-			if err == nil && tool.Name != "" && tool.Arguments != nil {
-				toolCalls = append(toolCalls, &tool)
-			}
-		}
-	}
 
+	var toolCalls []*FunctionCall = a.functioncallParser(resp)
 	for _, toolcall := range toolCalls {
 		tool, ok := ToolMap[toolcall.Name]
 		if !ok {

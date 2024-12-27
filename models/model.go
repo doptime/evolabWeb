@@ -29,8 +29,13 @@ const (
 	EndPoint8007     = "http://gpu.lan:8007/v1"
 	EndPoint8006     = "http://gpu.lan:8006/v1"
 	EndPoint8003     = "http://gpu.lan:8003/v1"
+	EndPointDeepseek = "https://api.deepseek.com/"
 	ApiKey           = "token-deaf"
+	ApiKeyDeepseek   = "sk-2d9e2689120c4544820485740ea2f36c"
 	ModelNameQwen32B = "Qwen/Qwen2.5-32B-Instruct-AWQ"
+
+	ModelNameQwenQvq72B      = "kosbu/QVQ-72B-Preview-AWQ"
+	ModelNameQwenQvq72BLocal = "/home/deaf/.cache/huggingface/hub/models--kosbu--QVQ-72B-Preview-AWQ/snapshots/9f763dc5a3bf51ed157aee12a8aae4ae8e7c1926"
 
 	ModelNameQwen32BCoder      = "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ"
 	ModelNameQwen32BCoderLocal = "/home/deaf/.cache/huggingface/hub/models--Qwen--Qwen2.5-32B-Instruct-AWQ/snapshots/5c7cb76a268fc6cfbb9c4777eb24ba6e27f9ee6c"
@@ -49,6 +54,8 @@ const (
 	ModelNameMarcoo1        = "AIDC-AI/Marco-o1"
 	ModelNameQwQ32B         = "KirillR/QwQ-32B-Preview-AWQ"
 	ModelNameLlama33_70b    = "casperhansen/llama-3.3-70b-instruct-awq"
+	ModelNameDeepseek       = "deepseek-chat"
+
 	//ModelNameQwQ32B = "/home/deaf/.cache/huggingface/hub/models--KirillR--QwQ-32B-Preview-AWQ/snapshots/b082e5c095a17c50cc78fc6fe43a0eae326bd203"
 )
 
@@ -59,8 +66,12 @@ var (
 	ModelQwen32BCoder      = NewModel(EndPoint8007, ApiKey, ModelNameQwen32BCoder)
 	ModelQwen32BCoderLocal = NewModel(EndPoint8007, ApiKey, ModelNameQwen32BCoderLocal)
 
-	ModelQwen72B        = NewModel(EndPoint8007, ApiKey, ModelNameQwen72B)
-	ModelQwen72BLocal   = NewModel(EndPoint8007, ApiKey, ModelNameQwen72BLocal)
+	ModelQwen72B      = NewModel(EndPoint8007, ApiKey, ModelNameQwen72B)
+	ModelQwen72BLocal = NewModel(EndPoint8007, ApiKey, ModelNameQwen72BLocal)
+
+	ModelQwenQvq72B      = NewModel(EndPoint8007, ApiKey, ModelNameQwenQvq72B)
+	ModelQwenQvq72BLocal = NewModel(EndPoint8007, ApiKey, ModelNameQwenQvq72BLocal)
+
 	ModelQwen14B        = NewModel(EndPoint8007, ApiKey, ModelNameQwen14B)
 	ModelQwen7B         = NewModel(EndPoint8007, ApiKey, ModelNameQwen7B)
 	ModelPhi3           = NewModel(EndPoint8006, ApiKey, ModelNamePhi3)
@@ -73,6 +84,7 @@ var (
 	ModelQwQ32B         = NewModel(EndPoint8007, ApiKey, ModelNameQwQ32B)
 	ModelQwen32B12K     = NewModel(EndPoint8008, ApiKey, ModelNameQwen32B)
 	ModelLlama33_70b    = NewModel(EndPoint8007, ApiKey, ModelNameLlama33_70b)
+	ModelDeepseek       = NewModel(EndPointDeepseek, ApiKeyDeepseek, ModelNameDeepseek)
 	//ModelDefault        = ModelQwen32BCoderLocal
 	ModelDefault = ModelQwen72BLocal
 )

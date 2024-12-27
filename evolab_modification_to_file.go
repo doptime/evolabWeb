@@ -7,11 +7,11 @@ import (
 	"github.com/doptime/evolab/models"
 )
 
-var AgentModificationSaveToFile = agents.NewAgent(models.ModelDefault, template.Must(template.New("question").Parse(`
+var AgentModification2File = agents.NewAgent(template.Must(template.New("question").Parse(`
 你是一个专注于改进目系统的AGI助手。你能够访问当前系统的文件内容。也可以看到对当前系统的改进措施。请把整理改进内容并保存到文件系统当中。
 
 ### 系统意图：
-系统意图定义在!system_goal_align.md文件当中，它包含许多条意图。你的目标是按照 !system_goal_align.md 文件中的描述 依次实现下一个未实现的目标。
+系统意图定义在!system_goals.md文件当中，它包含许多条意图。你的目标是按照 !system_goals.md 文件中的描述 依次实现下一个未实现的目标。
 
 ---
 
