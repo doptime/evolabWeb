@@ -23,17 +23,18 @@ type FileToMem struct {
 // GoalProposer is responsible for proposing goals using an OpenAI model,
 // handling function calls, and managing callbacks.
 type Agent struct {
-	Model              models.Model
-	Prompt             *template.Template
-	Tools              []openai.Tool
-	msgToMemKey        string
-	fileToMem          *FileToMem
-	msgDeFile          string
-	msgToFile          string
-	msgContentToFile   string
-	msgDeCliboard      bool
-	memDeCliboardKey   string
-	functioncallParser func(resp openai.ChatCompletionResponse) (toolCalls []*FunctionCall)
+	Model                       models.Model
+	Prompt                      *template.Template
+	Tools                       []openai.Tool
+	msgToMemKey                 string
+	fileToMem                   *FileToMem
+	msgDeFile                   string
+	msgToFile                   string
+	msgContentToFile            string
+	redisKey, reidisFieldPrefix string
+	msgDeCliboard               bool
+	memDeCliboardKey            string
+	functioncallParser          func(resp openai.ChatCompletionResponse) (toolCalls []*FunctionCall)
 
 	toolsInPrompt  bool
 	copyPromptOnly bool
@@ -67,6 +68,11 @@ func (a *Agent) WithMsgToFile(filename string) *Agent {
 }
 func (a *Agent) WithMsgContentToFile(filename string) *Agent {
 	a.msgContentToFile = filename
+	return a
+}
+func (a *Agent) WithMsgContentToRedisHashField(Key, FieldPrefix string) *Agent {
+	a.redisKey = Key
+	a.reidisFieldPrefix = FieldPrefix
 	return a
 }
 func (a *Agent) WithMsgDeClipboard() *Agent {
@@ -167,6 +173,13 @@ func (a *Agent) Call(ctx context.Context, memories ...map[string]any) (err error
 	}
 	if a.msgToMemKey != "" && len(memories) > 0 {
 		memories[0][a.msgToMemKey] = resp.Choices[0].Message.Content
+	}
+
+	if a.redisKey != "" && a.reidisFieldPrefix != "" && len(resp.Choices) > 0 {
+		field := utils.ExtractTagValue(resp.Choices[0].Message.Content, a.reidisFieldPrefix, false)
+		if field != "" {
+			saveToRedisHashKey(&SaveToRedisHashKey{Key: a.redisKey, Field: field, Value: resp.Choices[0].Message.Content})
+		}
 	}
 
 	var toolCalls []*FunctionCall = a.functioncallParser(resp)

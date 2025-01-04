@@ -15,12 +15,20 @@ Name = "doptime"
 UrlBase = "https://api.doptime.com"
 
 [[Redis]]
-DB = 2
+DB = 0
 Host = "keydb.lan"
 Name = "default"
-Password = "mXJLFAt3y47woLF5AkNiKs3ug1D0yWz8"
-Port = 6379
+Password = "XWkHqup04Gcm7Plieh5x"
+Port = 6382
 Username = ""
+
+# [[Redis]]
+# DB = 2
+# Host = "keydb.lan"
+# Name = "def6379"
+# Password = "mXJLFAt3y47woLF5AkNiKs3ug1D0yWz8"
+# Port = 6379
+# Username = ""
 
 [Settings]
 LogLevel = 1

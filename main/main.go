@@ -16,7 +16,7 @@ type TestStruct struct {
 func main() {
 	//go mem.AutoSaveSharedMemory()
 	//argsString := strings.Join(os.Args, " ")
-	argsString := "accomplish"
+	argsString := "niche"
 	if strings.Contains(argsString, "modification2f") {
 		evolab.AgentModification2File.WithModel(models.ModelQwen32B).
 			WithMsgToFile("Beforecommittofile.json").
@@ -28,6 +28,10 @@ func main() {
 	} else if strings.Contains(argsString, "goalgen") {
 		evolab.AgentIntentionGen.WithModel(models.ModelQwenQvq72BLocal).
 			WithMsgToFile("goalgen.json").Call(context.Background(), map[string]any{})
+	} else if strings.Contains(argsString, "niche") {
+		//evolab.GenNicheMarketOpportunity()
+		evolab.GenNicheMarketOpportunityParallel()
+
 	}
 
 }
