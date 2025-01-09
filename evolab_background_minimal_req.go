@@ -5,13 +5,15 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/doptime/evolab/agents"
-	"github.com/doptime/evolab/config"
-	"github.com/doptime/evolab/mem"
-	"github.com/doptime/evolab/utils"
+	"github.com/doptime/eloevo/agent"
+	"github.com/doptime/eloevo/agents"
+	"github.com/doptime/eloevo/config"
+	"github.com/doptime/eloevo/mem"
+	"github.com/doptime/eloevo/tools"
+	"github.com/doptime/eloevo/utils"
 )
 
-var AgentIntentionSolveWithMinimalFiles = agents.NewAgent(template.Must(template.New("question").Parse(`
+var AgentIntentionSolveWithMinimalFiles = agent.NewAgent(template.Must(template.New("question").Parse(`
 你是一个专注于改进目系统的AGI助手，请分析系统并修改后的内容到文件：
 
 ### 系统意图：
@@ -50,7 +52,7 @@ func GenQWithMinimalFiles() {
 	}
 	mem.SharedMemory["Files"] = leftFiles
 
-	var AgentIntentionSolve = agents.NewAgent(template.Must(template.New("question").Parse(`
+	var AgentIntentionSolve = agent.NewAgent(template.Must(template.New("question").Parse(`
 	你是一个专注于改进目系统的AGI助手，请分析系统并修改后的内容到文件：
 	
 	### 系统意图：
@@ -62,7 +64,7 @@ func GenQWithMinimalFiles() {
 	{{.}}
 	{{end}}
 	
-	`)), agents.SaveStringToFile.Tool).WithMsgDeFile("IntentionSolved.md").CopyPromptOnly()
+	`)), tools.SaveStringToFile.Tool).WithMsgDeFile("IntentionSolved.md").CopyPromptOnly()
 
 	AgentIntentionSolve.Call(context.Background(), map[string]any{})
 

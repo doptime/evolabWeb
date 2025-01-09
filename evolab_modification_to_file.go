@@ -3,11 +3,12 @@ package evolab
 import (
 	"text/template"
 
-	"github.com/doptime/evolab/agents"
-	"github.com/doptime/evolab/models"
+	"github.com/doptime/eloevo/agent"
+	"github.com/doptime/eloevo/models"
+	"github.com/doptime/eloevo/tools"
 )
 
-var AgentModification2File = agents.NewAgent(template.Must(template.New("question").Parse(`
+var AgentModification2File = agent.NewAgent(template.Must(template.New("question").Parse(`
 你是一个专注于改进目系统的AGI助手。你能够访问当前系统的文件内容。也可以看到对当前系统的改进措施。请把整理改进内容并保存到文件系统当中。
 
 ### 系统意图：
@@ -37,5 +38,5 @@ var AgentModification2File = agents.NewAgent(template.Must(template.New("questio
 	- 对删除文件情形的,文件名用.del 作为扩展名，避免不必要的覆盖。
 	- 对修改意见仅涉及部分文件内容修改的. 请注意修改后的文件内容需要完整保留除了修改处的其余部分.避免意外丢失内容.
 
-`)), agents.SaveStringToFile.Tool).
+`)), tools.SaveStringToFile.Tool).
 	WithModel(models.ModelQwen32BCoderLocal)

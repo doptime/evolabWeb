@@ -1,16 +1,17 @@
-package agents
+package tools
 
 import (
-	"github.com/doptime/evolab/utils"
+	"github.com/doptime/eloevo/tool"
+	"github.com/doptime/eloevo/utils"
 	"github.com/doptime/redisdb"
 )
 
-type SaveToFile struct {
+type FileNameString struct {
 	Filename string `json:"filename,omitempty" description:"Filename of output"`
 	Content  string `json:"content,omitempty" description:"The content string to save"`
 }
 
-func saveToFile(param *SaveToFile) {
+func SaveToFile(param *FileNameString) {
 	if param.Filename == "" || param.Content == "" {
 		return
 	}
@@ -18,15 +19,15 @@ func saveToFile(param *SaveToFile) {
 
 }
 
-var SaveStringToFile = NewTool[*SaveToFile]("SaveToFile", "Save string to localfile", saveToFile)
+var SaveStringToFile = tool.NewTool[*FileNameString]("SaveToFile", "Save string to localfile", SaveToFile)
 
-type SaveToRedisHashKey struct {
+type RedisHashKeyFieldValue struct {
 	Key   string `json:"key,omitempty" description:"Key of redis hash"`
 	Field string `json:"field,omitempty" description:"Field of redis hash"`
 	Value string `json:"value,omitempty" description:"The content string to save"`
 }
 
-func saveToRedisHashKey(param *SaveToRedisHashKey) {
+func SaveToRedisHashKey(param *RedisHashKeyFieldValue) {
 	if param.Key == "" || param.Field == "" || param.Value == "" {
 		return
 	}
@@ -34,4 +35,4 @@ func saveToRedisHashKey(param *SaveToRedisHashKey) {
 
 }
 
-var SaveStringToRedisHashKey = NewTool[*SaveToRedisHashKey]("SaveToRedisHashKey", "Save String to Redis Hash Key", saveToRedisHashKey)
+var SaveStringToRedisHashKey = tool.NewTool[*RedisHashKeyFieldValue]("RedisHashKeyFieldValue", "Save String to Redis Hash Key", SaveToRedisHashKey)

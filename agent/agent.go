@@ -1,4 +1,4 @@
-package agents
+package agent
 
 import (
 	"bytes"
@@ -6,10 +6,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"text/template"
+	"time"
 
-	"github.com/doptime/evolab/mem"
-	"github.com/doptime/evolab/models"
-	"github.com/doptime/evolab/utils"
+	"github.com/doptime/eloevo/mem"
+	"github.com/doptime/eloevo/models"
+	"github.com/doptime/eloevo/tool"
+	"github.com/doptime/eloevo/tools"
+	"github.com/doptime/eloevo/utils"
 	"github.com/samber/lo"
 	openai "github.com/sashabaranov/go-openai"
 	"golang.design/x/clipboard"
@@ -23,18 +26,19 @@ type FileToMem struct {
 // GoalProposer is responsible for proposing goals using an OpenAI model,
 // handling function calls, and managing callbacks.
 type Agent struct {
-	Model                       models.Model
-	Prompt                      *template.Template
-	Tools                       []openai.Tool
-	msgToMemKey                 string
-	fileToMem                   *FileToMem
-	msgDeFile                   string
-	msgToFile                   string
-	msgContentToFile            string
-	redisKey, reidisFieldPrefix string
-	msgDeCliboard               bool
-	memDeCliboardKey            string
-	functioncallParser          func(resp openai.ChatCompletionResponse) (toolCalls []*FunctionCall)
+	Model              *models.Model
+	Prompt             *template.Template
+	Tools              []openai.Tool
+	msgToMemKey        string
+	fileToMem          *FileToMem
+	msgDeFile          string
+	msgToFile          string
+	msgContentToFile   string
+	redisKey           string
+	fieldReaderFunc    FieldReaderFunc
+	msgDeCliboard      bool
+	memDeCliboardKey   string
+	functioncallParser func(resp openai.ChatCompletionResponse) (toolCalls []*FunctionCall)
 
 	toolsInPrompt  bool
 	copyPromptOnly bool
@@ -70,10 +74,18 @@ func (a *Agent) WithMsgContentToFile(filename string) *Agent {
 	a.msgContentToFile = filename
 	return a
 }
-func (a *Agent) WithMsgContentToRedisHashField(Key, FieldPrefix string) *Agent {
-	a.redisKey = Key
-	a.reidisFieldPrefix = FieldPrefix
-	return a
+
+type FieldReaderFunc func(content string) (field string)
+
+func (a *Agent) WithContent2RedisHash(Key string, f FieldReaderFunc) *Agent {
+	var b Agent = *a
+	b.redisKey = Key
+	b.fieldReaderFunc = f
+	return &b
+}
+func (a *Agent) Clone() *Agent {
+	var b Agent = *a
+	return &b
 }
 func (a *Agent) WithMsgDeClipboard() *Agent {
 	a.msgDeCliboard = true
@@ -87,7 +99,7 @@ func (a *Agent) WithToolsInPrompt() *Agent {
 	a.toolsInPrompt = true
 	return a
 }
-func (a *Agent) WithModel(Model models.Model) *Agent {
+func (a *Agent) WithModel(Model *models.Model) *Agent {
 	a.Model = Model
 	return a
 }
@@ -135,9 +147,11 @@ func (a *Agent) Call(ctx context.Context, memories ...map[string]any) (err error
 		return err
 	}
 
+	//model might be changed by other process
+	model := a.Model
 	// Create the chat completion request with function calls enabled
 	req := openai.ChatCompletionRequest{
-		Model: a.Model.ModelName,
+		Model: model.ModelName,
 		Messages: []openai.ChatCompletionMessage{
 			{
 				Role:    openai.ChatMessageRoleUser,
@@ -161,7 +175,12 @@ func (a *Agent) Call(ctx context.Context, memories ...map[string]any) (err error
 		clipboard.Write(clipboard.FmtText, []byte(req.Messages[0].Content))
 		return nil
 	}
-	resp, err := a.GetResponse(req)
+	timestart := time.Now()
+	resp, err := a.GetResponse(model.Client, req)
+	if err == nil {
+		model.UpdateModelResponseTime(time.Since(timestart))
+	}
+
 	fmt.Println("resp:", resp)
 	if err != nil {
 		fmt.Println("Error creating chat completion:", err)
@@ -175,16 +194,15 @@ func (a *Agent) Call(ctx context.Context, memories ...map[string]any) (err error
 		memories[0][a.msgToMemKey] = resp.Choices[0].Message.Content
 	}
 
-	if a.redisKey != "" && a.reidisFieldPrefix != "" && len(resp.Choices) > 0 {
-		field := utils.ExtractTagValue(resp.Choices[0].Message.Content, a.reidisFieldPrefix, false)
-		if field != "" {
-			saveToRedisHashKey(&SaveToRedisHashKey{Key: a.redisKey, Field: field, Value: resp.Choices[0].Message.Content})
+	if a.redisKey != "" && a.fieldReaderFunc != nil && len(resp.Choices) > 0 {
+		if field := a.fieldReaderFunc(resp.Choices[0].Message.Content); field != "" {
+			tools.SaveToRedisHashKey(&tools.RedisHashKeyFieldValue{Key: a.redisKey, Field: field, Value: resp.Choices[0].Message.Content})
 		}
 	}
 
 	var toolCalls []*FunctionCall = a.functioncallParser(resp)
 	for _, toolcall := range toolCalls {
-		tool, ok := ToolMap[toolcall.Name]
+		tool, ok := tool.ToolMap[toolcall.Name]
 		if !ok {
 			return fmt.Errorf("error: function not found in FunctionMap")
 		}

@@ -1,6 +1,9 @@
 package agents
 
-import "github.com/doptime/evolab/mem"
+import (
+	"github.com/doptime/eloevo/mem"
+	"github.com/doptime/eloevo/tool"
+)
 
 type FileNames struct {
 	Category string   `json:"category,omitempty" description:"Category of files"`
@@ -15,4 +18,4 @@ func WithFiles(param *FileNames) {
 
 }
 
-var StoreFilenamesToMemory = NewTool("PickFileNames", "Save the picked out files", WithFiles)
+var StoreFilenamesToMemory = tool.NewTool("PickFileNames", "Save the picked out files", WithFiles)

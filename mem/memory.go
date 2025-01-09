@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/cespare/xxhash/v2"
-	"github.com/doptime/evolab/config"
+	"github.com/doptime/eloevo/config"
 	"github.com/doptime/redisdb"
 	cmap "github.com/orcaman/concurrent-map/v2"
 	"github.com/samber/lo"

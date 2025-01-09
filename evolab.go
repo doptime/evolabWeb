@@ -5,7 +5,8 @@ import (
 	"os/exec"
 	"text/template"
 
-	"github.com/doptime/evolab/agents"
+	"github.com/doptime/eloevo/agent"
+	"github.com/doptime/eloevo/tool"
 )
 
 type LinuxCommand struct {
@@ -33,7 +34,7 @@ func executeCommand(param *LinuxCommand) {
 	log.Printf("Command '%s' executed successfully.\nOutput:\n%s", param.Command, string(output))
 }
 
-var CmdTool = agents.NewTool[*LinuxCommand]("linuxcmd", "After all revisions are Ready, commit the file to the directory using this tool", executeCommand)
+var CmdTool = tool.NewTool[*LinuxCommand]("linuxcmd", "After all revisions are Ready, commit the file to the directory using this tool", executeCommand)
 
 var EvoLabPrompt = template.Must(template.New("question").Parse(`You are an world-class AGI System, your are going to auto evolve the given system, bringing the system world-class performance.
 Do not hast to finish the task in one response, this Prompt will be called 100 times, you can take your time to finish the task.
@@ -49,4 +50,4 @@ Your work style ∈ { John D. Rockefeller, Andrew Carnegie, Henry Ford, Walt Dis
 {{.}}
 {{end}}
 `))
-var AgentEvolab = agents.NewAgent(EvoLabPrompt)
+var AgentEvolab = agent.NewAgent(EvoLabPrompt)

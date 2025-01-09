@@ -7,7 +7,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/doptime/evolab/config"
+	"github.com/doptime/eloevo/config"
 	"github.com/sashabaranov/go-openai"
 )
 

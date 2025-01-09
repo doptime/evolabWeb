@@ -3,10 +3,10 @@ package evolab
 import (
 	"text/template"
 
-	"github.com/doptime/evolab/agents"
+	"github.com/doptime/eloevo/agent"
 )
 
-var AgentIntentionGen = agents.NewAgent(template.Must(template.New("question").Parse(`
+var AgentIntentionGen = agent.NewAgent(template.Must(template.New("question").Parse(`
 ##  本系统存在3个角色，用高可迭代性的方式，创建全球最卓越的产品：
 	1. 人类用户提出目标场景需求
 	2. 你是一位AGI专家，专注于意图对齐问题。你的目标是把情境转化为意图目标。

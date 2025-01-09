@@ -26,10 +26,17 @@ func ExtractTagValue(str, tag string, caseSensative bool) (val string) {
 	if ind > 0 && ind < len(str) {
 		field := str[ind:]
 		field = strings.Split(field, "\n")[0]
+		field = strings.Split(field, "。")[0]
 		//remove :：** “ "” and space
 		// 使用正则表达式移除不需要的字符
-		var reg = regexp.MustCompile(`[\-:：*" #()]`)
+		var reg = regexp.MustCompile(`[\-:：*" #]`)
 		field = reg.ReplaceAllString(field, "")
+		if len(field) > 0 && field[0] == '(' && field[len(field)-1] == ')' {
+			field = field[1 : len(field)-1]
+		}
+		if strings.Contains(field, ")") && !strings.Contains(field, "(") {
+			field = strings.Split(field, ")")[0]
+		}
 		return field
 	}
 	return ""

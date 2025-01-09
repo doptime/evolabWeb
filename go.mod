@@ -1,4 +1,4 @@
-module github.com/doptime/evolab
+module github.com/doptime/eloevo
 
 go 1.22.3
 

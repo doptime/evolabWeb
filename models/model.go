@@ -1,6 +1,9 @@
 package models
 
 import (
+	"sync"
+	"time"
+
 	openai "github.com/sashabaranov/go-openai"
 )
 
@@ -8,23 +11,42 @@ import (
 type Model struct {
 	Client    *openai.Client
 	ModelName string
+
+	avgResponseTime time.Duration
+	mutex           sync.RWMutex
+}
+
+func (model *Model) UpdateModelResponseTime(duration time.Duration) {
+	if duration < 10*time.Microsecond {
+		return
+	}
+	model.mutex.Lock()
+	defer model.mutex.Unlock()
+	alpha := 0.1
+	model.avgResponseTime = time.Duration(float64(model.avgResponseTime)*(1.0-alpha) + float64(duration)*alpha)
+	if model.avgResponseTime < time.Second {
+		model.avgResponseTime = time.Second
+	}
 }
 
 // NewModel initializes a new Model with the given baseURL, apiKey, and modelName.
 // It configures the OpenAI client to use a custom base URL if provided.
-func NewModel(baseURL, apiKey, modelName string) Model {
+func NewModel(baseURL, apiKey, modelName string) *Model {
 	config := openai.DefaultConfig(apiKey)
 	if baseURL != "" {
 		config.BaseURL = baseURL
 	}
 	client := openai.NewClientWithConfig(config)
-	return Model{
-		Client:    client,
-		ModelName: modelName,
+	return &Model{
+		Client:          client,
+		ModelName:       modelName,
+		avgResponseTime: 120 * time.Second,
 	}
 }
 
 const (
+	EndPoint8010     = "http://gpu.lan:8010/v1"
+	EndPoint8009     = "http://gpu.lan:8009/v1"
 	EndPoint8008     = "http://gpu.lan:8008/v1"
 	EndPoint8007     = "http://gpu.lan:8007/v1"
 	EndPoint8006     = "http://gpu.lan:8006/v1"
@@ -53,8 +75,11 @@ const (
 	ModelNameLlama38b       = "neuralmagic/Meta-Llama-3.1-8B-Instruct-quantized.w4a16"
 	ModelNameMarcoo1        = "AIDC-AI/Marco-o1"
 	ModelNameQwQ32B         = "KirillR/QwQ-32B-Preview-AWQ"
-	ModelNameLlama33_70b    = "casperhansen/llama-3.3-70b-instruct-awq"
-	ModelNameDeepseek       = "deepseek-chat"
+	ModelNameQwQ32BLocal    = "/home/deaf/.cache/huggingface/hub/models--KirillR--QwQ-32B-Preview-AWQ/snapshots/b082e5c095a17c50cc78fc6fe43a0eae326bd203"
+	ModelNamePhi4           = "/home/deaf/.cache/huggingface/hub/models--Orion-zhen--phi-4-awq/snapshots/bc73c60ec9d246127dff940b3331c5464f18442e"
+
+	ModelNameLlama33_70b = "casperhansen/llama-3.3-70b-instruct-awq"
+	ModelNameDeepseek    = "deepseek-chat"
 
 	//ModelNameQwQ32B = "/home/deaf/.cache/huggingface/hub/models--KirillR--QwQ-32B-Preview-AWQ/snapshots/b082e5c095a17c50cc78fc6fe43a0eae326bd203"
 )
@@ -82,6 +107,7 @@ var (
 	ModelLlama38b       = NewModel(EndPoint8007, ApiKey, ModelNameLlama38b)
 	ModelMarcoo1        = NewModel(EndPoint8008, ApiKey, ModelNameMarcoo1)
 	ModelQwQ32B         = NewModel(EndPoint8007, ApiKey, ModelNameQwQ32B)
+	ModelQwQ32BLocal    = NewModel(EndPoint8007, ApiKey, ModelNameQwQ32BLocal)
 	ModelQwen32B12K     = NewModel(EndPoint8008, ApiKey, ModelNameQwen32B)
 	ModelLlama33_70b    = NewModel(EndPoint8007, ApiKey, ModelNameLlama33_70b)
 	ModelDeepseek       = NewModel(EndPointDeepseek, ApiKeyDeepseek, ModelNameDeepseek)
@@ -90,7 +116,7 @@ var (
 )
 
 // Models maps model names to their corresponding Model instances.
-var Models = map[string]Model{
+var Models = map[string]*Model{
 	ModelNameQwen32B:        ModelQwen32B,
 	ModelNameQwen72B:        ModelQwen72B,
 	ModelNameQwen14B:        ModelQwen14B,

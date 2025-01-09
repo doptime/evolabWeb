@@ -1,11 +1,11 @@
-package agents
+package tool
 
 import (
 	"encoding/json"
 	"log"
 	"reflect"
 
-	"github.com/doptime/evolab/mem"
+	"github.com/doptime/eloevo/mem"
 	openai "github.com/sashabaranov/go-openai"
 )
 

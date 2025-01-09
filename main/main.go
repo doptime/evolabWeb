@@ -4,8 +4,9 @@ import (
 	"context"
 	"strings"
 
-	"github.com/doptime/evolab"
-	"github.com/doptime/evolab/models"
+	evolab "github.com/doptime/eloevo"
+	"github.com/doptime/eloevo/eloevo"
+	"github.com/doptime/eloevo/models"
 )
 
 type TestStruct struct {
@@ -16,7 +17,7 @@ type TestStruct struct {
 func main() {
 	//go mem.AutoSaveSharedMemory()
 	//argsString := strings.Join(os.Args, " ")
-	argsString := "niche"
+	argsString := "elo"
 	if strings.Contains(argsString, "modification2f") {
 		evolab.AgentModification2File.WithModel(models.ModelQwen32B).
 			WithMsgToFile("Beforecommittofile.json").
@@ -29,9 +30,10 @@ func main() {
 		evolab.AgentIntentionGen.WithModel(models.ModelQwenQvq72BLocal).
 			WithMsgToFile("goalgen.json").Call(context.Background(), map[string]any{})
 	} else if strings.Contains(argsString, "niche") {
-		//evolab.GenNicheMarketOpportunity()
 		evolab.GenNicheMarketOpportunityParallel()
-
+	} else if strings.Contains(argsString, "elo") {
+		eloevo.PrintEloWinnerTop100()
+		eloevo.EloInParallel()
+		return
 	}
-
 }

@@ -9,9 +9,10 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/doptime/evolab/agents"
-	"github.com/doptime/evolab/config"
-	"github.com/doptime/evolab/mem"
+	"github.com/doptime/eloevo/agent"
+	"github.com/doptime/eloevo/config"
+	"github.com/doptime/eloevo/mem"
+	"github.com/doptime/eloevo/tools"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -35,7 +36,7 @@ var EvoLabIntentionAnalyzePrompt = template.Must(template.New("question").Parse(
 3. 提出目标意图有效的解决方案。
 
 `))
-var AgentIntentionDiveIn = agents.NewAgent(EvoLabIntentionAnalyzePrompt).WithCallback(
+var AgentIntentionDiveIn = agent.NewAgent(EvoLabIntentionAnalyzePrompt).WithCallback(
 	func(ctx context.Context, inputs string) error {
 		file, err := os.Create(config.DefaultRealmPath() + "/thinking_over_intention.evolab")
 		if err == nil {
@@ -71,7 +72,7 @@ var EvoLabIntentionSavePrompt = template.Must(template.New("question").Parse(`
    如果涉及多个文件，请多次调用 FunctionCall / tool_call，每次调用都相应保存到不同的文件中。
 
 `))
-var AgentIntentionSave = agents.NewAgent(EvoLabIntentionSavePrompt, agents.SaveStringToFile.Tool)
+var AgentIntentionSave = agent.NewAgent(EvoLabIntentionSavePrompt, tools.SaveStringToFile.Tool)
 
 func SolveIntention(ctx context.Context) error {
 
