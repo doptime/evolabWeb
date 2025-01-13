@@ -16,9 +16,6 @@ You are Business plan evaluator there are two proposals:
 ## PlanB
 {{.PlanB}}
 
-## PlanB
-{{.PlanB}}
-
 
 ## Business plan evaluation
 	- The plan will be carry out all by AGI after this evaluation. Please dive deeply into these two proposal, And select which one is better。

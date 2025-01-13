@@ -6,7 +6,6 @@ import (
 	"text/template"
 
 	"github.com/doptime/eloevo/agent"
-	"github.com/doptime/eloevo/agents"
 	"github.com/doptime/eloevo/config"
 	"github.com/doptime/eloevo/mem"
 	"github.com/doptime/eloevo/tools"
@@ -29,18 +28,18 @@ var AgentIntentionSolveWithMinimalFiles = agent.NewAgent(template.Must(template.
 {{end}}
 
 注意 "PickFileNames" 函数的 Category 请设置为 ”ContextFiles“
-`)), agents.StoreFilenamesToMemory.Tool).
+`)), tools.StoreFilenamesToMemory.Tool).
 	WithMsgDeFile("IntentionSolved.md").CopyPromptOnly()
 
 func GenQWithMinimalFiles() {
 	AgentIntentionSolveWithMinimalFiles.Call(context.Background(), map[string]any{})
-	ctxFiles, ok := mem.SharedMemory["ContextFiles"].([]string)
+	ctxFiles, ok := memory.SharedMemory["ContextFiles"].([]string)
 	if !ok {
 		return
 	}
 	var keptFiles string = strings.Join(ctxFiles, "\n")
 
-	originalFiles, ok := mem.SharedMemory["Files"].([]*config.FileData)
+	originalFiles, ok := memory.SharedMemory["Files"].([]*config.FileData)
 	if !ok {
 		return
 	}
@@ -50,7 +49,7 @@ func GenQWithMinimalFiles() {
 			leftFiles = append(leftFiles, file)
 		}
 	}
-	mem.SharedMemory["Files"] = leftFiles
+	memory.SharedMemory["Files"] = leftFiles
 
 	var AgentIntentionSolve = agent.NewAgent(template.Must(template.New("question").Parse(`
 	你是一个专注于改进目系统的AGI助手，请分析系统并修改后的内容到文件：

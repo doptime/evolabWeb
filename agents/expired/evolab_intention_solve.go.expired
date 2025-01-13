@@ -76,10 +76,10 @@ var AgentIntentionSave = agent.NewAgent(EvoLabIntentionSavePrompt, tools.SaveStr
 
 func SolveIntention(ctx context.Context) error {
 
-	memoryjson, _ := json.Marshal(mem.SharedMemory)
+	memoryjson, _ := json.Marshal(memory.SharedMemory)
 	fmt.Println(string(memoryjson))
 	errorgroup, _ := errgroup.WithContext(context.Background())
-	items := mem.IntentionFiles.Items()
+	items := memory.IntentionFiles.Items()
 	for k, v := range items {
 		if strings.Contains(k, ".done") {
 			continue

@@ -1,7 +1,7 @@
-package agents
+package tools
 
 import (
-	"github.com/doptime/eloevo/mem"
+	"github.com/doptime/eloevo/memory"
 	"github.com/doptime/eloevo/tool"
 )
 
@@ -14,7 +14,7 @@ func WithFiles(param *FileNames) {
 	if len(param.Files) == 0 || param.Category == "" {
 		return
 	}
-	mem.SharedMemory[param.Category] = param.Files
+	memory.SharedMemory[param.Category] = param.Files
 
 }
 

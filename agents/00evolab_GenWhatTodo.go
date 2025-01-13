@@ -1,4 +1,4 @@
-package evolab
+package agents
 
 import (
 	"context"
@@ -50,7 +50,7 @@ NicheMarketOpportunityName: 为该市场机会命名（必须包含）
 
 其他内容: 由模型自行决定需要包含哪些分析维度、充分深度评估该商业机会的潜力和可行性。
    `))).WithContent2RedisHash("NicheMarketOpportunityHumanProsperity", func(content string) (field string) {
-	return utils.ExtractTagValue(content, "NicheMarketOpportunityName", false)
+	return utils.ExtractTagValue(content, "NicheMarketOpportunityName")
 })
 
 func GenNicheMarketOpportunity() (err error) {

@@ -8,7 +8,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/doptime/eloevo/mem"
+	"github.com/doptime/eloevo/memory"
 	"github.com/doptime/eloevo/models"
 	"github.com/doptime/eloevo/tool"
 	"github.com/doptime/eloevo/tools"
@@ -52,6 +52,10 @@ func NewAgent(prompt *template.Template, tools ...openai.Tool) (a *Agent) {
 		Tools:  tools,
 	}
 	a.WithToolcallParser(nil)
+	return a
+}
+func (a *Agent) WithTools(tools ...openai.Tool) *Agent {
+	a.Tools = append(a.Tools, tools...)
 	return a
 }
 func (a *Agent) WithFileToMem(filename, memoryKey string) *Agent {
@@ -118,7 +122,7 @@ func (a *Agent) CopyPromptOnly() *Agent {
 func (a *Agent) Call(ctx context.Context, memories ...map[string]any) (err error) {
 	// Render the prompt with the provided files content and available functions
 	var params = map[string]any{}
-	for k, v := range mem.SharedMemory {
+	for k, v := range memory.SharedMemory {
 		params[k] = v
 	}
 	for _, memory := range memories {
@@ -151,7 +155,7 @@ func (a *Agent) Call(ctx context.Context, memories ...map[string]any) (err error
 	model := a.Model
 	// Create the chat completion request with function calls enabled
 	req := openai.ChatCompletionRequest{
-		Model: model.ModelName,
+		Model: model.Name,
 		Messages: []openai.ChatCompletionMessage{
 			{
 				Role:    openai.ChatMessageRoleUser,
@@ -202,7 +206,7 @@ func (a *Agent) Call(ctx context.Context, memories ...map[string]any) (err error
 
 	var toolCalls []*FunctionCall = a.functioncallParser(resp)
 	for _, toolcall := range toolCalls {
-		tool, ok := tool.ToolMap[toolcall.Name]
+		tool, ok := tool.HandleFuncs[toolcall.Name]
 		if !ok {
 			return fmt.Errorf("error: function not found in FunctionMap")
 		}

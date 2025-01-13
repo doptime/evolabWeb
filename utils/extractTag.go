@@ -3,27 +3,29 @@ package utils
 import (
 	"regexp"
 	"strings"
+	"unicode/utf8"
 )
 
-func ExtractTagValue(str, tag string, caseSensative bool) (val string) {
+func ExtractTagValue(str, tag string) (val string) {
 	str = strings.ReplaceAll(str, "\r", "")
-	if !caseSensative {
-		val = strings.ToLower(str)
-		tag = strings.ToLower(tag)
+
+	ind := strings.Index(str, tag)
+	if ind < 0 {
+		return ""
 	}
 
-	ind := strings.Index(val, tag)
-	if ind > 0 {
-		ind += len(tag)
-		//remove empty lines \n, to fetch value in next line
-		for ind < len(str) && (str[ind] == '\n' || str[ind] == ':' || str[ind] == '"' || str[ind] == ')' || str[ind] == '*' || str[ind] == '#') {
-			ind++
+	ind += len(tag)
+	//remove empty lines \n, to fetch value in next line
+	for ind < len(str) {
+		r, size := utf8.DecodeRuneInString(str[ind:])
+		if r == '：' || r == '\n' || r == ':' || r == '"' || r == ')' || r == '*' || r == '#' {
+			ind += size
+			continue
 		}
-		for ind < len(str)-1 && (strings.Index(str[ind:ind+2], "：") == 0) {
-			ind++
-		}
+		break
 	}
-	if ind > 0 && ind < len(str) {
+
+	if ind >= 0 && ind < len(str) {
 		field := str[ind:]
 		field = strings.Split(field, "\n")[0]
 		field = strings.Split(field, "。")[0]
@@ -40,4 +42,31 @@ func ExtractTagValue(str, tag string, caseSensative bool) (val string) {
 		return field
 	}
 	return ""
+}
+
+func ExtractTextValue(str, tag, endTag string) (val string) {
+	str = strings.ReplaceAll(str, "\r", "")
+	ind := strings.Index(str, tag)
+	if ind < 0 {
+		return ""
+	}
+
+	ind += len(tag)
+	//remove empty lines \n, to fetch value in next line
+	for ind < len(str) {
+		r, size := utf8.DecodeRuneInString(str[ind:])
+		if r == '：' || r == '\n' || r == ':' || r == '"' || r == ')' || r == '*' || r == '#' {
+			ind += size
+			continue
+		}
+		break
+	}
+
+	if ind >= 0 && ind < len(str) {
+		val = str[ind:]
+	}
+	if endTag != "" {
+		val = strings.Split(val, endTag)[0]
+	}
+	return strings.TrimSpace(val)
 }

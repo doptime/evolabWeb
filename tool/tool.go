@@ -5,7 +5,7 @@ import (
 	"log"
 	"reflect"
 
-	"github.com/doptime/eloevo/mem"
+	"github.com/doptime/eloevo/memory"
 	openai "github.com/sashabaranov/go-openai"
 )
 
@@ -13,13 +13,18 @@ type ToolCallInterface interface {
 	HandleFunctionCall(Param interface{}) (err error)
 }
 
-var ToolMap = make(map[string]ToolCallInterface)
+var HandleFuncs = make(map[string]ToolCallInterface)
 
 // Tool 是FuctionCall的逻辑实现。FunctionCall 是Tool的接口定义
 type Tool[v any] struct {
 	openai.Tool
 	MemoryCacheKey string
 	Functions      []func(param v)
+}
+
+func (t *Tool[v]) WithFunction(f func(param v)) *Tool[v] {
+	t.Functions = append(t.Functions, f)
+	return t
 }
 
 func (t *Tool[v]) WithMemoryCacheKey(key string) *Tool[v] {
@@ -47,7 +52,7 @@ func (t *Tool[v]) HandleFunctionCall(Param interface{}) (err error) {
 			log.Printf("Error parsing arguments for tool %s: %v", t.Tool.Function.Name, err)
 			return err
 		}
-		mem.SaveToShareMemory(t.MemoryCacheKey, reflect.ValueOf(valPtr).Interface())
+		memory.SaveToShareMemory(t.MemoryCacheKey, reflect.ValueOf(valPtr).Interface())
 		// Assign the dereferenced pointer to val
 		val = reflect.ValueOf(valPtr).Interface().(v)
 	} else {
@@ -57,7 +62,7 @@ func (t *Tool[v]) HandleFunctionCall(Param interface{}) (err error) {
 			log.Printf("Error parsing arguments for tool %s: %v", t.Tool.Function.Name, err)
 			return err
 		}
-		mem.SaveToShareMemory(t.MemoryCacheKey, val)
+		memory.SaveToShareMemory(t.MemoryCacheKey, val)
 	}
 
 	for _, f := range t.Functions {
@@ -97,7 +102,7 @@ func NewTool[v any](name string, description string, fs ...func(param v)) *Tool[
 	}
 
 	// Define the function to handle LLM response
-	ToolMap[name] = a
+	HandleFuncs[name] = a
 	return a
 }
 

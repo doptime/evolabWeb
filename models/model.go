@@ -9,8 +9,8 @@ import (
 
 // Model represents an OpenAI model with its associated client and model name.
 type Model struct {
-	Client    *openai.Client
-	ModelName string
+	Client *openai.Client
+	Name   string
 
 	avgResponseTime time.Duration
 	mutex           sync.RWMutex
@@ -39,7 +39,7 @@ func NewModel(baseURL, apiKey, modelName string) *Model {
 	client := openai.NewClientWithConfig(config)
 	return &Model{
 		Client:          client,
-		ModelName:       modelName,
+		Name:            modelName,
 		avgResponseTime: 120 * time.Second,
 	}
 }
@@ -54,77 +54,80 @@ const (
 	EndPointDeepseek = "https://api.deepseek.com/"
 	ApiKey           = "token-deaf"
 	ApiKeyDeepseek   = "sk-2d9e2689120c4544820485740ea2f36c"
-	ModelNameQwen32B = "Qwen/Qwen2.5-32B-Instruct-AWQ"
+	NameQwen32B      = "Qwen/Qwen2.5-32B-Instruct-AWQ"
 
-	ModelNameQwenQvq72B      = "kosbu/QVQ-72B-Preview-AWQ"
-	ModelNameQwenQvq72BLocal = "/home/deaf/.cache/huggingface/hub/models--kosbu--QVQ-72B-Preview-AWQ/snapshots/9f763dc5a3bf51ed157aee12a8aae4ae8e7c1926"
+	NameQwenQvq72B      = "kosbu/QVQ-72B-Preview-AWQ"
+	NameQwenQvq72BLocal = "/home/deaf/.cache/huggingface/hub/models--kosbu--QVQ-72B-Preview-AWQ/snapshots/9f763dc5a3bf51ed157aee12a8aae4ae8e7c1926"
 
-	ModelNameQwen32BCoder      = "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ"
-	ModelNameQwen32BCoderLocal = "/home/deaf/.cache/huggingface/hub/models--Qwen--Qwen2.5-32B-Instruct-AWQ/snapshots/5c7cb76a268fc6cfbb9c4777eb24ba6e27f9ee6c"
+	NameQwen32BCoder      = "Qwen/Qwen2.5-Coder-32B-Instruct-AWQ"
+	NameQwen32BCoderLocal = "/home/deaf/.cache/huggingface/hub/models--Qwen--Qwen2.5-32B-Instruct-AWQ/snapshots/5c7cb76a268fc6cfbb9c4777eb24ba6e27f9ee6c"
 
-	ModelNameQwen72B      = "Qwen/Qwen2.5-72B-Instruct-AWQ"
-	ModelNameQwen72BLocal = "/home/deaf/.cache/huggingface/hub/models--Qwen--Qwen2.5-72B-Instruct-AWQ/snapshots/698703eae6604af048a3d2f509995dc302088217"
-	//ModelNameQwen14B = "Qwen/Qwen2.5-14B-Instruct-AWQ"
-	ModelNameQwen14B        = "/home/deaf/.cache/huggingface/hub/models--Qwen--Qwen2.5-14B-Instruct-AWQ/snapshots/15caf3706c437f72fe4a0b64b4aee94b5e823e9c"
-	ModelNameQwen7B         = "Qwen/Qwen2.5-7B-Instruct-AWQ"
-	ModelNamePhi3           = "neuralmagic/Phi-3-medium-128k-instruct-quantized.w4a16"
-	ModelNameGemma          = "neuralmagic/gemma-2-9b-it-quantized.w4a16"
-	ModelNameMistralNemo    = "shuyuej/Mistral-Nemo-Instruct-2407-GPTQ"
-	ModelNameMistralSmall   = "AMead10/Mistral-Small-Instruct-2409-awq"
-	ModelNameMistralNemoAwq = "casperhansen/mistral-nemo-instruct-2407-awq"
-	ModelNameLlama38b       = "neuralmagic/Meta-Llama-3.1-8B-Instruct-quantized.w4a16"
-	ModelNameMarcoo1        = "AIDC-AI/Marco-o1"
-	ModelNameQwQ32B         = "KirillR/QwQ-32B-Preview-AWQ"
-	ModelNameQwQ32BLocal    = "/home/deaf/.cache/huggingface/hub/models--KirillR--QwQ-32B-Preview-AWQ/snapshots/b082e5c095a17c50cc78fc6fe43a0eae326bd203"
-	ModelNamePhi4           = "/home/deaf/.cache/huggingface/hub/models--Orion-zhen--phi-4-awq/snapshots/bc73c60ec9d246127dff940b3331c5464f18442e"
+	NameQwen72B      = "Qwen/Qwen2.5-72B-Instruct-AWQ"
+	NameQwen72BLocal = "/home/deaf/.cache/huggingface/hub/models--Qwen--Qwen2.5-72B-Instruct-AWQ/snapshots/698703eae6604af048a3d2f509995dc302088217"
+	//NameQwen14B = "Qwen/Qwen2.5-14B-Instruct-AWQ"
+	NameQwen14B        = "/home/deaf/.cache/huggingface/hub/models--Qwen--Qwen2.5-14B-Instruct-AWQ/snapshots/15caf3706c437f72fe4a0b64b4aee94b5e823e9c"
+	NameQwen7B         = "Qwen/Qwen2.5-7B-Instruct-AWQ"
+	NamePhi3           = "neuralmagic/Phi-3-medium-128k-instruct-quantized.w4a16"
+	NameGemma          = "neuralmagic/gemma-2-9b-it-quantized.w4a16"
+	NameMistralNemo    = "shuyuej/Mistral-Nemo-Instruct-2407-GPTQ"
+	NameMistralSmall   = "AMead10/Mistral-Small-Instruct-2409-awq"
+	NameMistralNemoAwq = "casperhansen/mistral-nemo-instruct-2407-awq"
+	NameLlama38b       = "neuralmagic/Meta-Llama-3.1-8B-Instruct-quantized.w4a16"
+	NameMarcoo1        = "AIDC-AI/Marco-o1"
+	NameQwQ32B         = "KirillR/QwQ-32B-Preview-AWQ"
+	NameQwQ32BLocal    = "/home/deaf/.cache/huggingface/hub/models--KirillR--QwQ-32B-Preview-AWQ/snapshots/b082e5c095a17c50cc78fc6fe43a0eae326bd203"
+	NamePhi4           = "/home/deaf/.cache/huggingface/hub/models--Orion-zhen--phi-4-awq/snapshots/bc73c60ec9d246127dff940b3331c5464f18442e"
 
-	ModelNameLlama33_70b = "casperhansen/llama-3.3-70b-instruct-awq"
-	ModelNameDeepseek    = "deepseek-chat"
+	NameLlama33_70b = "casperhansen/llama-3.3-70b-instruct-awq"
+	NameDeepseek    = "deepseek-chat"
 
-	//ModelNameQwQ32B = "/home/deaf/.cache/huggingface/hub/models--KirillR--QwQ-32B-Preview-AWQ/snapshots/b082e5c095a17c50cc78fc6fe43a0eae326bd203"
+	//NameQwQ32B = "/home/deaf/.cache/huggingface/hub/models--KirillR--QwQ-32B-Preview-AWQ/snapshots/b082e5c095a17c50cc78fc6fe43a0eae326bd203"
 )
 
 // Initialize all models with their corresponding endpoints and names.
 var (
-	ModelQwen32B = NewModel(EndPoint8008, ApiKey, ModelNameQwen32B)
+	ModelQwen32B = NewModel(EndPoint8008, ApiKey, NameQwen32B)
 
-	ModelQwen32BCoder      = NewModel(EndPoint8007, ApiKey, ModelNameQwen32BCoder)
-	ModelQwen32BCoderLocal = NewModel(EndPoint8007, ApiKey, ModelNameQwen32BCoderLocal)
+	ModelQwen32BCoder      = NewModel(EndPoint8007, ApiKey, NameQwen32BCoder)
+	ModelQwen32BCoderLocal = NewModel(EndPoint8007, ApiKey, NameQwen32BCoderLocal)
 
-	ModelQwen72B      = NewModel(EndPoint8007, ApiKey, ModelNameQwen72B)
-	ModelQwen72BLocal = NewModel(EndPoint8007, ApiKey, ModelNameQwen72BLocal)
+	ModelQwen72B      = NewModel(EndPoint8007, ApiKey, NameQwen72B)
+	ModelQwen72BLocal = NewModel(EndPoint8007, ApiKey, NameQwen72BLocal)
 
-	ModelQwenQvq72B      = NewModel(EndPoint8007, ApiKey, ModelNameQwenQvq72B)
-	ModelQwenQvq72BLocal = NewModel(EndPoint8007, ApiKey, ModelNameQwenQvq72BLocal)
+	ModelQwenQvq72B      = NewModel(EndPoint8007, ApiKey, NameQwenQvq72B)
+	ModelQwenQvq72BLocal = NewModel(EndPoint8007, ApiKey, NameQwenQvq72BLocal)
 
-	ModelQwen14B        = NewModel(EndPoint8007, ApiKey, ModelNameQwen14B)
-	ModelQwen7B         = NewModel(EndPoint8007, ApiKey, ModelNameQwen7B)
-	ModelPhi3           = NewModel(EndPoint8006, ApiKey, ModelNamePhi3)
-	ModelGemma          = NewModel(EndPoint8006, ApiKey, ModelNameGemma)
-	ModelMistralNemo    = NewModel(EndPoint8003, ApiKey, ModelNameMistralNemo)
-	ModelMistralSmall   = NewModel(EndPoint8003, ApiKey, ModelNameMistralSmall)
-	ModelMistralNemoAwq = NewModel(EndPoint8003, ApiKey, ModelNameMistralNemoAwq)
-	ModelLlama38b       = NewModel(EndPoint8007, ApiKey, ModelNameLlama38b)
-	ModelMarcoo1        = NewModel(EndPoint8008, ApiKey, ModelNameMarcoo1)
-	ModelQwQ32B         = NewModel(EndPoint8007, ApiKey, ModelNameQwQ32B)
-	ModelQwQ32BLocal    = NewModel(EndPoint8007, ApiKey, ModelNameQwQ32BLocal)
-	ModelQwen32B12K     = NewModel(EndPoint8008, ApiKey, ModelNameQwen32B)
-	ModelLlama33_70b    = NewModel(EndPoint8007, ApiKey, ModelNameLlama33_70b)
-	ModelDeepseek       = NewModel(EndPointDeepseek, ApiKeyDeepseek, ModelNameDeepseek)
+	ModelQwen14B        = NewModel(EndPoint8007, ApiKey, NameQwen14B)
+	ModelQwen7B         = NewModel(EndPoint8007, ApiKey, NameQwen7B)
+	ModelPhi3           = NewModel(EndPoint8006, ApiKey, NamePhi3)
+	ModelGemma          = NewModel(EndPoint8006, ApiKey, NameGemma)
+	ModelMistralNemo    = NewModel(EndPoint8003, ApiKey, NameMistralNemo)
+	ModelMistralSmall   = NewModel(EndPoint8003, ApiKey, NameMistralSmall)
+	ModelMistralNemoAwq = NewModel(EndPoint8003, ApiKey, NameMistralNemoAwq)
+	ModelLlama38b       = NewModel(EndPoint8007, ApiKey, NameLlama38b)
+	ModelMarcoo1        = NewModel(EndPoint8008, ApiKey, NameMarcoo1)
+	ModelQwQ32B         = NewModel(EndPoint8007, ApiKey, NameQwQ32B)
+	ModelQwQ32BLocal    = NewModel(EndPoint8007, ApiKey, NameQwQ32BLocal)
+	ModelQwen32B12K     = NewModel(EndPoint8008, ApiKey, NameQwen32B)
+	ModelLlama33_70b    = NewModel(EndPoint8007, ApiKey, NameLlama33_70b)
+	ModelDeepseek       = NewModel(EndPointDeepseek, ApiKeyDeepseek, NameDeepseek)
+	ModelQwen2_1d5B     = NewModel("http://gpu.lan:8215/v1", ApiKey, "/home/deaf/.cache/huggingface/hub/models--Qwen--Qwen2.5-1.5B-Instruct/snapshots/989aa7980e4cf806f80c7fef2b1adb7bc71aa306")
+	ModelQwen2_7B       = NewModel("http://gpu.lan:1207/v1", ApiKey, "/home/deaf/.cache/huggingface/hub/models--Qwen--Qwen2.5-7B-Instruct-AWQ/snapshots/b25037543e9394b818fdfca67ab2a00ecc7dd641")
+
 	//ModelDefault        = ModelQwen32BCoderLocal
 	ModelDefault = ModelQwen72BLocal
 )
 
 // Models maps model names to their corresponding Model instances.
 var Models = map[string]*Model{
-	ModelNameQwen32B:        ModelQwen32B,
-	ModelNameQwen72B:        ModelQwen72B,
-	ModelNameQwen14B:        ModelQwen14B,
-	ModelNameQwen7B:         ModelQwen7B,
-	ModelNamePhi3:           ModelPhi3,
-	ModelNameGemma:          ModelGemma,
-	ModelNameMistralNemo:    ModelMistralNemo,
-	ModelNameMistralSmall:   ModelMistralSmall,
-	ModelNameMistralNemoAwq: ModelMistralNemoAwq,
-	ModelNameLlama38b:       ModelLlama38b,
+	NameQwen32B:        ModelQwen32B,
+	NameQwen72B:        ModelQwen72B,
+	NameQwen14B:        ModelQwen14B,
+	NameQwen7B:         ModelQwen7B,
+	NamePhi3:           ModelPhi3,
+	NameGemma:          ModelGemma,
+	NameMistralNemo:    ModelMistralNemo,
+	NameMistralSmall:   ModelMistralSmall,
+	NameMistralNemoAwq: ModelMistralNemoAwq,
+	NameLlama38b:       ModelLlama38b,
 }
