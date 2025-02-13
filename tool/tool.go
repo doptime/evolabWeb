@@ -9,17 +9,24 @@ import (
 	openai "github.com/sashabaranov/go-openai"
 )
 
-type ToolCallInterface interface {
-	HandleFunctionCall(Param interface{}) (err error)
+type ToolInterface interface {
+	HandleCallback(Param interface{}) (err error)
+	OaiTool() *openai.Tool
+	Name() string
 }
-
-var HandleFuncs = make(map[string]ToolCallInterface)
 
 // Tool 是FuctionCall的逻辑实现。FunctionCall 是Tool的接口定义
 type Tool[v any] struct {
 	openai.Tool
 	MemoryCacheKey string
 	Functions      []func(param v)
+}
+
+func (t *Tool[v]) OaiTool() *openai.Tool {
+	return &t.Tool
+}
+func (t *Tool[v]) Name() string {
+	return t.Tool.Function.Name
 }
 
 func (t *Tool[v]) WithFunction(f func(param v)) *Tool[v] {
@@ -31,7 +38,7 @@ func (t *Tool[v]) WithMemoryCacheKey(key string) *Tool[v] {
 	t.MemoryCacheKey = key
 	return t
 }
-func (t *Tool[v]) HandleFunctionCall(Param interface{}) (err error) {
+func (t *Tool[v]) HandleCallback(Param interface{}) (err error) {
 	var parambytes []byte
 	if str, ok := Param.(string); ok {
 		parambytes = []byte(str)
@@ -102,7 +109,8 @@ func NewTool[v any](name string, description string, fs ...func(param v)) *Tool[
 	}
 
 	// Define the function to handle LLM response
-	HandleFuncs[name] = a
+	//HandleFuncs[name] = a
+
 	return a
 }
 

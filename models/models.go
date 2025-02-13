@@ -16,9 +16,9 @@ type ModelList struct {
 var EloModels = ModelList{
 	Name: "EloModels",
 	Models: []*Model{
-		NewModel(EndPoint8007, ApiKey, NamePhi4),
-		NewModel(EndPoint8008, ApiKey, NamePhi4),
-		//NewModel(EndPoint8007, ApiKey, NameQwQ32BLocal),
+		//NewModel(EndPoint8007, ApiKey, NamePhi4),
+		//NewModel(EndPoint8008, ApiKey, NamePhi4),
+		NewModel(EndPoint8007, ApiKey, NameQwQ32BLocal),
 		//NewModel(EndPoint8009, ApiKey, NameQwQ32BLocal),
 		//NewModel(EndPoint8010, ApiKey, NameQwQ32BLocal),
 		//NewModel(EndPoint8008, ApiKey, "/home/deaf/UwU-7B-Instruct-Q8_0.gguf"),

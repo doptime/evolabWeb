@@ -9,10 +9,10 @@ const D = 400
 
 // Elo 表示每个玩家的状态，包括评分、比赛次数和唯一标识符
 type Elo struct {
-	Id      string   // 玩家唯一标识符
-	Rating  int      // 当前评分
-	Matches []string // 参与的比赛Id
-	Scores  []float64
+	Id      string    // 玩家唯一标识符
+	Rating  int       // 当前评分
+	Matches []string  `json:"-"` // 参与的比赛Id
+	Scores  []float64 `json:"-"`
 }
 
 // NewElo 创建一个新的 Elo 对象

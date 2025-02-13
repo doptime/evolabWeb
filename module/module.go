@@ -1,31 +1,37 @@
 package module
 
 import (
-	"time"
-
-	"github.com/doptime/eloevo/elo"
+	"github.com/spf13/afero"
 )
 
 // 模块结构体（简化版）
 type Module struct {
-	elo.Elo                  // elo.Rating 看做模块生命力，或被引用权重
-	VersionTags     string   // 模块版本
-	ProblemToSolve  []string // 模块所属问题域
-	DesignIdeas     []string
-	OuterInterfaces []string
-	InnerInterfaces []string
-	Dependencies    []string // 本模块对其它模块的依赖
-	TestResults     []*TestResult
+	Name     string // 模块名称
+	BranchId string // 模块Id
+
+	EloScore  int64   // 模块评分
+	Milestone float64 // 1: file/code constructed, 2:file/code tested, 3:hardware constructed, 4:hardware tested, 5:Income generated
+
+	ProblemToSolve []string // 模块所属问题域
+	DesignIdeas    []string
+	OuterModuleIds []string
+	InnerModuleIds []string
 }
 
-func (m *Module) SourceCodeLocation() string {
-	return "./" + m.Id + m.VersionTags
+func (m *Module) SourceCodes() (fileList []string) {
+	fs := afero.NewOsFs()
+	files, _ := afero.ReadDir(fs, "./"+m.BranchId)
+	for _, file := range files {
+		content, _ := afero.ReadFile(fs, "./"+m.BranchId+"/"+file.Name())
+		fileList = append(fileList, "file-name:\n"+file.Name()+"\ncontent:\n"+string(content))
+	}
+	return fileList
 }
 
-// TestResult stores the outcome of a test scenario on the module.
-type TestResult struct {
-	ScenarioID string
-	Passed     bool
-	Timestamp  time.Time
-	Feedback   string
+func (m Module) Id() string {
+	return m.BranchId
+}
+
+func (m Module) Rating(delta int) int {
+	return int(m.EloScore) + delta
 }

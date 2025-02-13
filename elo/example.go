@@ -1,4 +1,4 @@
-package eloevo
+package elo
 
 import (
 	"context"
@@ -11,7 +11,6 @@ import (
 	"text/template"
 
 	"github.com/doptime/eloevo/agent"
-	"github.com/doptime/eloevo/elo"
 	"github.com/doptime/eloevo/models"
 	"github.com/doptime/redisdb"
 	"github.com/samber/lo"
@@ -37,11 +36,9 @@ You are Business plan evaluator there are two proposals:
    请选择 "PlanA" 或 "PlanB" 中的一个作为答案
 `))).WithModel(models.ModelQwQ32BLocal)
 
-var keyProjects1 = redisdb.HashKey[string, string](redisdb.WithKey("NicheMarketOpportunity"))
-var keyProjects2 = redisdb.HashKey[string, string](redisdb.WithKey("NicheMarketOpportunityQwen25-72B"))
 var keyProjectsAll = redisdb.HashKey[string, string](redisdb.WithKey("NicheMarketOpportunityAll"))
 
-var keyElos = redisdb.HashKey[string, *elo.Elo](redisdb.WithKey("Elos"))
+var keyElos = redisdb.HashKey[string, *Elo](redisdb.WithKey("Elos"))
 
 var keyEloMatch = redisdb.HashKey[string, string](redisdb.WithKey("EloMatches"))
 
@@ -60,25 +57,10 @@ func MergeOppotunities() {
 }
 
 var OptunityDescription map[string]string
-var Elos map[string]*elo.Elo
-
-func LoadEvoTable() {
-	var keyProjectsAll = redisdb.HashKey[string, string](redisdb.WithKey("NicheMarketOpportunityAll"))
-	OptunityDescription, _ = keyProjectsAll.HGetAll()
-	Elos, _ = keyElos.HGetAll()
-	for k := range OptunityDescription {
-		if _, ok := Elos[k]; !ok {
-			Elos[k] = &elo.Elo{Id: k, Rating: 1000, Matches: nil}
-		}
-	}
-	keyElos.HMSet(Elos)
-}
-func init() {
-	LoadEvoTable()
-}
+var Elos map[string]*Elo
 
 func EvoMatch() {
-	playerA, playerB := elo.Sampling(lo.Values(Elos))
+	playerA, playerB := Sampling(lo.Values(Elos))
 	model := models.EloModels.SelectOne("roundrobin")
 	AgentElo.WithModel(model).WithCallback(func(ctx context.Context, inputs string) error {
 		matchId := redisdb.NanoId(8)
@@ -95,9 +77,9 @@ func EvoMatch() {
 		keyEloMatch.HSet(matchId, inputs)
 		AWin := inda > indb
 		if AWin {
-			elo.UpdateRatings(playerA, playerB, matchId, 1)
+			UpdateRatings(playerA, playerB, matchId, 1)
 		} else {
-			elo.UpdateRatings(playerA, playerB, matchId, 0)
+			UpdateRatings(playerA, playerB, matchId, 0)
 		}
 		keyElos.HSet(playerA.Id, playerA)
 		keyElos.HSet(playerB.Id, playerB)
@@ -112,7 +94,7 @@ func EvoMatch() {
 func PrintEloWinnerTop100() {
 	ElosSlices := lo.Values(Elos)
 	//sort by rating
-	slices.SortFunc(ElosSlices, func(a, b *elo.Elo) int {
+	slices.SortFunc(ElosSlices, func(a, b *Elo) int {
 		return (a.Rating - b.Rating)
 	})
 	slices.Reverse(ElosSlices)
@@ -128,7 +110,21 @@ func PrintEloWinnerTop100() {
 
 }
 
+var keyProjects1 = redisdb.HashKey[string, string](redisdb.WithKey("NicheMarketOpportunity"))
+var keyProjects2 = redisdb.HashKey[string, string](redisdb.WithKey("NicheMarketOpportunityQwen25-72B"))
+
 func EloInParallel() {
+	//LoadEvoTable
+	var keyProjectsAll = redisdb.HashKey[string, string](redisdb.WithKey("NicheMarketOpportunityAll"))
+	OptunityDescription, _ = keyProjectsAll.HGetAll()
+	Elos, _ = keyElos.HGetAll()
+	for k := range OptunityDescription {
+		if _, ok := Elos[k]; !ok {
+			Elos[k] = &Elo{Id: k, Rating: 1000, Matches: nil}
+		}
+	}
+	keyElos.HMSet(Elos)
+
 	const numThreads = 32
 	//const numThreads = 3
 	const numCallsPerThread = 4000

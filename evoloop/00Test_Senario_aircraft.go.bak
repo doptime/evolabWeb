@@ -1,0 +1,130 @@
+// package evoloop
+
+// import (
+// 	"context"
+// 	"fmt"
+// 	"sync"
+// 	"text/template"
+
+// 	"github.com/doptime/eloevo/agent"
+// 	"github.com/doptime/eloevo/models"
+// 	"github.com/doptime/eloevo/tool"
+// 	"github.com/doptime/redisdb"
+// 	"github.com/mroth/weightedrand"
+// 	"github.com/samber/lo"
+// )
+
+// var AgentGenTestSenarioModule = agent.NewAgent(template.Must(template.New("GenTestSenario").Parse(`
+// 你是一个商业方案的进化式迭代开发系统的一部分。这个迭代式开发系统的通过数百万次迭代，实现无人机项目。
+
+// 本系统工作原理：
+// 1. 开发/测试一体化。通过规划测试场景，把目标系统放到规划中的测试场景中进行测试。如果目标系统还不足以进行测试，就进一步完善目标系统，直到目标系统能够在真实环境中运行。
+// 2. 对数百万次迭代开发/测试中的一次来说，流程如下:
+// 	2.1 生成测试场景。
+// 	测试场景的类别∈{ 市场需求，产品/服务，商业模式，团队能力，竞争与壁垒，财务与资源，法律与合规，市场进入策略，技术与创新，用户获取与营销，可持续性与社会影响，风险管理}.
+// 	你将要生成的目标场景，目标类别已经指定，它属于目标类别:{{.test.Catalogue}}。目标类别:{{.test.Catalogue}}下会涉及数十到数百个场景，所有的目标场景集合以满足MECE原则的方式覆盖了目标类别。每一个场景情境确切，符合实际，具有挑战性。
+
+// 	2.2 为测试场景选择模块化建构方案。
+// 		- 新的解决方案会借鉴之前的解决方案，并加以改良成为新的解决方案。
+// 		- 一个场景类下有数十个实现方案。
+// 		- 解决方案的形式是模块列表。
+// 		- 从现有的模块列表当中，选择一个模块列表子集，以构建/编译测测试场景的解决方案。 如果已有的模块或不存在必要的组件模块，那么请引用一个不存在的模块。
+
+// 	2.3 解决方案/模块列表的静态审核、迭代
+// 		查看解决方案(模块列表)对应的文件实现。使用LLM迭代器进行模块迭代。对解决方案给与反馈。
+// 		如果模块的实现方式不足以为真是的测试做好准备。那么实现或调整模块的实现方式，并且创建新的模块亚版本，为下一次迭代做准备
+
+// 	2.4 如果项目可编译。那么编译项目
+
+// 	2.5 在真实环境中运行实现方案，对解决方案给与反馈。
+
+// 3. 为了使得这个开发/测试一体化的方式更易于理解，这里做相应的哲学版说明。
+// 	3.1 相对进化论。本系统中，模块被视为基因，测试场景视为环境；解决方案被视为个体。模块迭代器视为变异器。
+// 	3.2 试运行是否通过被视为自然选择。通过开发/测试的方案（模块列表），被使用的模块被提升排行，也就是被视为基因的集体胜利，也就是，模块会被隐式地更新EloRanking。
+
+// 你可以参考已有的测试场景和模块信息：
+// 已有测试场景的列表：
+// {{range .TestScenarios}}
+// {{.}}
+// {{end}}
+
+// 当前的测试场景是：
+// {{.test}}
+
+// 请继续完善创建真实测试场景。
+//  - 场景应是符合实际情况的，尽可能真实的构想。
+//  - 场景有助于明确问题，并且有助于通过问题的解决为目标系统贡献价值。
+//  - 有助于目标系统保持真实环境中运行需要的简洁性、可靠性。
+
+// 请进一步完善创建需求明确。描述确切，符合实际的测试场景。创建的场景要求和现有的测试场景共同构成MECE约束。
+
+// 在完成所有这些工作后，调用ExtractDataStructure来输出上面生成的内容。
+
+// `))).WithTools(tool.NewTool("ExtractDataStructure", "Extract Data Structure from Text", func(param *TestScenario) {
+// 	if param.Id == "" || param.Catalogue == "" || param.Name == "" || param.Description == "" {
+// 		return
+// 	}
+// 	AircraftTests[param.Id] = param
+// 	keyAircraftTests.HSet(param.Id, param)
+// }))
+// var keyAircraftTests = redisdb.HashKey[string, *TestScenario](redisdb.WithKey("AircraftTests"))
+
+// var AircraftTests = map[string]*TestScenario{}
+
+// // GenNicheMarketOpportunityParallel calls GenNicheMarketOpportunity 1000 times in 16 parallel threads.
+// func GeTestSenarioParallel() {
+// 	const numThreads = 1
+// 	const numCallsPerThread = 1000 * 1000 / numThreads
+// 	AircraftTests, _ = keyAircraftTests.HGetAll()
+
+// 	choices := []weightedrand.Choice{
+// 		{Item: "市场需求: 确保项目有明确的市场需求和增长潜力", Weight: 15},
+// 		{Item: "产品/服务: 产品的独特性、技术可行性和用户体验至关重要", Weight: 15},
+// 		{Item: "商业模式: 盈利模式和成本结构的合理性直接影响项目的可持续性", Weight: 15},
+// 		{Item: "团队能力: 强大的团队是执行和应对挑战的基础", Weight: 15},
+// 		{Item: "竞争与壁垒: 了解竞争环境并建立竞争优势，确保项目能够在市场中立足", Weight: 10},
+// 		{Item: "财务与资源: 充足的资金和资源是项目启动和扩展的保障", Weight: 10},
+// 		{Item: "法律与合规: 确保项目在法律框架内运作，避免潜在的法律风险", Weight: 5},
+// 		{Item: "市场进入策略: 有效的市场进入策略能够加速项目的市场渗透", Weight: 5},
+// 		{Item: "技术与创新: 技术优势和创新能力能够提升项目的竞争力", Weight: 5},
+// 		{Item: "用户获取与营销: 高效的用户获取和营销策略有助于快速扩大用户基础", Weight: 5},
+// 		{Item: "可持续性与社会影响: 确保项目具备长期可持续发展，并产生积极的社会影响", Weight: 3},
+// 		{Item: "风险管理: 有效的风险管理能够降低项目失败的可能性", Weight: 2},
+// 	}
+// 	chooser, _ := weightedrand.NewChooser(choices...)
+
+// 	var wg sync.WaitGroup
+// 	wg.Add(numThreads)
+
+// 	for i := 0; i < numThreads; i++ {
+// 		go func() {
+// 			defer wg.Done()
+// 			for j := 0; j < numCallsPerThread; j++ {
+// 				testScenario := &TestScenario{
+// 					Id:        redisdb.NanoId(8),
+// 					Catalogue: chooser.Pick().(string),
+// 				}
+
+// 				testGroup := lo.Filter(lo.Values(AircraftTests), func(ts *TestScenario, i int) bool {
+// 					return ts.Catalogue == testScenario.Catalogue
+// 				})
+// 				//shuffle testGroup
+// 				if lo.Shuffle(testGroup); len(testGroup) > 15 {
+// 					testGroup = testGroup[:15]
+// 				}
+
+// 				var inputsParams = map[string]any{
+// 					"test":          testScenario,
+// 					"TestScenarios": testGroup,
+// 				}
+// 				//.WithModel(models.EloModels.SelectOne("roundrobin"))
+// 				err := AgentGenTestSenarioModule.WithModel(models.FuseO1).Call(context.Background(), inputsParams)
+// 				if err != nil {
+// 					fmt.Printf("Agent call failed: %v\n", err)
+// 					continue
+// 				}
+// 			}
+// 		}()
+// 	}
+// 	wg.Wait()
+// }

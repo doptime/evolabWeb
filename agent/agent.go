@@ -29,6 +29,7 @@ type Agent struct {
 	Model              *models.Model
 	Prompt             *template.Template
 	Tools              []openai.Tool
+	toolsCallbacks     map[string]func(Param interface{}) error
 	msgToMemKey        string
 	fileToMem          *FileToMem
 	msgDeFile          string
@@ -45,17 +46,25 @@ type Agent struct {
 	CallBack       func(ctx context.Context, inputs string) error
 }
 
-func NewAgent(prompt *template.Template, tools ...openai.Tool) (a *Agent) {
+func NewAgent(prompt *template.Template, tools ...tool.ToolInterface) (a *Agent) {
 	a = &Agent{
-		Model:  models.ModelDefault,
-		Prompt: prompt,
-		Tools:  tools,
+		Model:          models.ModelDefault,
+		Prompt:         prompt,
+		toolsCallbacks: map[string]func(Param interface{}) error{},
 	}
+	a.WithTools(tools...)
 	a.WithToolcallParser(nil)
 	return a
 }
-func (a *Agent) WithTools(tools ...openai.Tool) *Agent {
-	a.Tools = append(a.Tools, tools...)
+func (a *Agent) WithToolCallbacks(toolcallbacks map[string]func(Param interface{}) error) *Agent {
+	a.toolsCallbacks = toolcallbacks
+	return a
+}
+func (a *Agent) WithTools(tools ...tool.ToolInterface) *Agent {
+	for _, tool := range tools {
+		a.Tools = append(a.Tools, *tool.OaiTool())
+		a.toolsCallbacks[tool.Name()] = tool.HandleCallback
+	}
 	return a
 }
 func (a *Agent) WithFileToMem(filename, memoryKey string) *Agent {
@@ -89,6 +98,12 @@ func (a *Agent) WithContent2RedisHash(Key string, f FieldReaderFunc) *Agent {
 }
 func (a *Agent) Clone() *Agent {
 	var b Agent = *a
+	b.toolsCallbacks = map[string]func(Param interface{}) error{}
+	for k, v := range a.toolsCallbacks {
+		b.toolsCallbacks[k] = v
+	}
+	b.Tools = append([]openai.Tool{}, a.Tools...)
+
 	return &b
 }
 func (a *Agent) WithMsgDeClipboard() *Agent {
@@ -203,14 +218,14 @@ func (a *Agent) Call(ctx context.Context, memories ...map[string]any) (err error
 			tools.SaveToRedisHashKey(&tools.RedisHashKeyFieldValue{Key: a.redisKey, Field: field, Value: resp.Choices[0].Message.Content})
 		}
 	}
-
 	var toolCalls []*FunctionCall = a.functioncallParser(resp)
 	for _, toolcall := range toolCalls {
-		tool, ok := tool.HandleFuncs[toolcall.Name]
-		if !ok {
+		_tool, ok := a.toolsCallbacks[toolcall.Name]
+		if ok {
+			_tool(toolcall.Arguments)
+		} else if !ok {
 			return fmt.Errorf("error: function not found in FunctionMap")
 		}
-		tool.HandleFunctionCall(toolcall.Arguments)
 	}
 
 	return nil

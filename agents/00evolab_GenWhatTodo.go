@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/doptime/eloevo/agent"
-	"github.com/doptime/eloevo/models"
 	"github.com/doptime/eloevo/utils"
 	"github.com/doptime/redisdb"
 )
@@ -62,7 +61,7 @@ func GenNicheMarketOpportunity() (err error) {
 	}
 	fmt.Println("GenNicheMarketOpportunity...")
 	//return AgentGenNicheMarketOpportunity.WithModel(models.EloModels.SelectOne("roundrobin")).		Call(context.Background(), inputsParams)
-	return AgentGenNicheMarketOpportunity.WithModel(models.ModelDeepseek).Call(context.Background(), inputsParams)
+	return AgentGenNicheMarketOpportunity.Call(context.Background(), inputsParams)
 }
 
 // GenNicheMarketOpportunityParallel calls GenNicheMarketOpportunity 1000 times in 16 parallel threads.
