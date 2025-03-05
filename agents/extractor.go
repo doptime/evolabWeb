@@ -16,7 +16,7 @@ var aExtractScenario = agent.NewAgent(template.Must(template.New("structExtracto
 `)))
 
 func ExtractStruct[v any](text string, callback func(param v)) {
-	var toolExtratorSenario = tool.NewTool[v]("ExtractDataStructure", "Extract Data Structure from Text", callback)
+	var toolExtratorSenario = tool.NewTool("ExtractDataStructure", "Extract Data Structure from Text", callback)
 	aExtractScenario.Clone().WithTools(toolExtratorSenario).WithModel(models.ModelQwen14B)
 	aExtractScenario.Call(context.Background(), map[string]any{"Text": text})
 }

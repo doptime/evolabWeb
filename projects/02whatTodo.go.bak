@@ -1,0 +1,147 @@
+package projects
+
+import (
+	"context"
+	"fmt"
+	"slices"
+	"sync"
+	"text/template"
+
+	"github.com/doptime/eloevo/agent"
+	"github.com/doptime/eloevo/elo"
+	"github.com/doptime/eloevo/models"
+	"github.com/doptime/eloevo/tool"
+	"github.com/doptime/eloevo/utils"
+	"github.com/doptime/redisdb"
+	"github.com/samber/lo"
+)
+
+type OtherPlansSorted struct {
+	FromBestToWorstById []string
+}
+type BusinessPlan struct {
+	Id                     string
+	OpportunityName        string
+	OpportunityDescription []string
+	OtherPlansSorted       *OtherPlansSorted
+	Elo                    int64 `json:"-" description:"Ignored Parameter"`
+
+	MarketSize               float32 `description:"Log scale based on revenue in USD from government stats and third-party surveys"`
+	BusinessUtilization      float32
+	MarketGrowthRate         float32 `description:"Past 5 years' Compound Annual Growth Rate (CAGR)"`
+	ExpectedReturn           float32 `description:"Internal Rate of Return (IRR) or Net Present Value (NPV)"`
+	TechnicalFeasibility     float32 `description:"0-1 scale based on AI assessment of technology maturity"`
+	InnovationPotential      float32 `description:"0-1 scale based on patent filings and technological uniqueness"`
+	ResourceAllocation       float32 `description:"Budget in USD as a percentage of total company budget"`
+	ProjectRisk              float32 `description:"0-1 scale based on risk factor assessment"`
+	CompetitionIntensity     float32 `description:"Herfindahl-Herschman Index (HHI) for market concentration"`
+	ImplementationDifficulty float32 `description:"0-1 scale based on task complexity and resource availability"`
+	TimeToMarket             float32 `description:"Expected time to market in months"`
+	TeamExperience           float32 `description:"Average years of experience of team members"`
+	PolicySupport            float32 `description:"Government policy support score (1-10)"`
+}
+
+func (u *BusinessPlan) GetId() string {
+	return u.Id
+}
+func (u *BusinessPlan) Rating(delta int) int {
+	u.Elo += int64(delta)
+	return int(u.Elo)
+}
+
+var AgentGenNicheMarketOpportunity = agent.NewAgent(template.Must(template.New("question").Parse(`
+请作为一位创新思维专家, 全面探索AGI时代，一切都即将开始无人化运营后，将要出现的应用领域及其盈利机会.
+
+生成的商业函数将采用这个效用函数:	UtilityFunction = exp(WeightMarketSizeln(MarketSize) + 0.18ln(MarketGrowthRate) + 0.22ln(ExpectedReturn) + 0.10ln(TechnicalFeasibility) + 0.15ln(InnovationPotential) + 0.080ln(ResourceAllocation) - 0.12ln(ProjectRisk + 1) - 0.080ln(CompetitionIntensity) - 0.10ln(ImplementationDifficulty) + 0.060ln(TimeToMarket) + 0.040ln(TeamExperience) + 0.050ln(PolicySupport))
+
+These are current Business plans:
+{{range .BusinessPlans}}
+	Id:{{.Id}}
+	OpportunityName:{{.OpportunityName}}
+	OpportunityDescription:{{.OpportunityDescription}}
+	BusinessUtilization:{{.BusinessUtilization}}
+{{end}}
+
+
+步骤：
+	1. 请仔细深度探讨现有机会方案的分布，并且提出一个新的商业机会。以便新机会和现有的机会之间构成MECE约束。从而全面探索可能的AGI 时代的机会。
+	2. 进一步分析这个机会。应该如何才能被最大化地开发其价值。
+	3. 按照Functional Tools 中的效用函数中的评估标准，给出这个机会的各个变量的可靠估值。
+
+   `))).WithTools(tool.NewTool("UtilityFunctionExplorationFinal", "Extract UtilityFunctionExploration struct from previous response", func(model *BusinessPlan) {
+	if len(model.OpportunityName) == 0 || len(model.OpportunityDescription) == 0 {
+		return
+	}
+	if len(BusinessPlanMap) > 0 && (model.OtherPlansSorted == nil || len(model.OtherPlansSorted.FromBestToWorstById) == 0) {
+		return
+	}
+
+	model.Id = redisdb.NanoId(8)
+	model.Elo = 1200
+	BusinessPlanMap[model.Id] = model
+	keyBusinessPlan.HSet(model.Id, model)
+	UtilityLock.Lock()
+	defer UtilityLock.Unlock()
+	playersRanked := []elo.BElo{}
+	for _, v := range model.OtherPlansSorted.FromBestToWorstById {
+		if _, ok := BusinessPlanMap[v]; ok {
+			playersRanked = append(playersRanked, BusinessPlanMap[v])
+		}
+	}
+	elo.BatchUpdateRanking(playersRanked...)
+	if len(BusinessPlanMap) > ProjectsUtilityFunctionTopN*2 {
+		//remove the worst 10% of the projects
+		playersOrderByElo := lo.Values(BusinessPlanMap)
+		//sort the players by elo
+		slices.SortFunc(playersOrderByElo, func(i, j *BusinessPlan) int {
+			return int(i.Elo - j.Elo)
+		})
+		//remove the worst 2
+		fieldsToRemove := lo.Map(playersOrderByElo[:2], func(v *BusinessPlan, i int) string { return v.Id })
+		mapToRemove := map[string]*BusinessPlan{}
+		for _, v := range fieldsToRemove {
+			mapToRemove[v] = BusinessPlanMap[v]
+		}
+		keyBusinessPlanExpired.HMSet(mapToRemove)
+		for _, v := range fieldsToRemove {
+			delete(BusinessPlanMap, v)
+		}
+		keyBusinessPlan.HDel(fieldsToRemove...)
+		//save other UtilityFunctionExploration
+		keyBusinessPlan.HMSet(BusinessPlanMap)
+
+		slices.Reverse(playersOrderByElo)
+		for i, v := range playersOrderByElo {
+			fmt.Println("Best Model,top ", i+1, v.Id, "Elo", v.Elo)
+		}
+	}
+
+}))
+
+var BusinessPlanMap = map[string]*BusinessPlan{}
+var keyBusinessPlan = redisdb.HashKey[string, *BusinessPlan](redisdb.WithRds("projects"))
+var keyBusinessPlanExpired = redisdb.HashKey[string, *BusinessPlan](redisdb.WithKey("BusinessPlanExpired"), redisdb.WithRds("projects"))
+
+// GenNicheMarketOpportunityParallel calls GenNicheMarketOpportunity 1000 times in 16 parallel threads.
+func GenBusinessPlanParallel() {
+	const numThreads = 12
+	const numCallsPerThread = 4000
+
+	var wg sync.WaitGroup
+	wg.Add(numThreads)
+
+	BusinessPlanMap, _ = keyBusinessPlan.HGetAll()
+
+	for i := 0; i < numThreads; i++ {
+		go func() {
+			defer wg.Done()
+			for j := 0; j < numCallsPerThread; j++ {
+
+				AgentGenNicheMarketOpportunity.WithModel(models.FuseO1).Call(context.Background(), map[string]any{
+					"BusinessPlans": utils.GetRandomNFromMap(BusinessPlanMap, 10),
+				})
+			}
+		}()
+	}
+	wg.Wait()
+}

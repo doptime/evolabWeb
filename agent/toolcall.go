@@ -14,6 +14,15 @@ type FunctionCall struct {
 	Arguments any `json:"arguments,omitempty"`
 }
 
+func parseOneToolcall(toolcallString string) (toolCalls *FunctionCall) {
+	tool := FunctionCall{Name: "", Arguments: map[string]any{}}
+	//openai.FunctionCall 中的Arguments是string类型.直接unmrshal 会报错
+	err := json.Unmarshal([]byte(toolcallString), &tool)
+	if err == nil && tool.Name != "" && tool.Arguments != nil {
+		return &tool
+	}
+	return nil
+}
 func ToolcallParserDefault(resp openai.ChatCompletionResponse) (toolCalls []*FunctionCall) {
 	for _, choice := range resp.Choices {
 		for _, toolcall := range choice.Message.ToolCalls {
@@ -29,23 +38,29 @@ func ToolcallParserDefault(resp openai.ChatCompletionResponse) (toolCalls []*Fun
 		rsp = strings.ReplaceAll(rsp, "<tool>", "<tool_call>")
 		rsp = strings.ReplaceAll(rsp, "</tools>", "<tool_call>")
 		rsp = strings.ReplaceAll(rsp, "</tool_call>", "<tool_call>")
+		//json tool call
+		rsp = strings.ReplaceAll(rsp, "```json\n", "<tool_call>")
+		rsp = strings.ReplaceAll(rsp, "\n```", "<tool_call>")
+		rsp = strings.ReplaceAll(rsp, "```\n", "<tool_call>")
+
 		items := strings.Split(rsp, "<tool_call>")
 		//case json only
 		if len(items) > 3 {
 			items = items[1 : len(items)-1]
 		}
 		for _, toolcallString := range items {
+			if len(toolcallString) < 10 {
+				continue
+			}
 			if i := strings.Index(toolcallString, "{"); i > 0 {
 				toolcallString = toolcallString[i:]
 			}
-			if i := strings.LastIndex(toolcallString, "}"); i > 0 && i < len(toolcallString)-1 {
+			if i := strings.LastIndex(toolcallString, "}"); i > 0 {
 				toolcallString = toolcallString[:i+1]
 			}
-			tool := FunctionCall{Name: "", Arguments: map[string]any{}}
-			//openai.FunctionCall 中的Arguments是string类型.直接unmrshal 会报错
-			err := json.Unmarshal([]byte(toolcallString), &tool)
-			if err == nil && tool.Name != "" && tool.Arguments != nil {
-				toolCalls = append(toolCalls, &tool)
+
+			if toolcall := parseOneToolcall(toolcallString); toolcall != nil {
+				toolCalls = append(toolCalls, toolcall)
 			}
 		}
 	}
@@ -98,7 +113,7 @@ func ToolcallParserFileSaver(resp openai.ChatCompletionResponse) (toolCalls []*F
 func (a *Agent) WithToolcallParser(parse func(resp openai.ChatCompletionResponse) (toolCalls []*FunctionCall)) *Agent {
 	if parse == nil {
 		parse = ToolcallParserDefault
+		a.functioncallParsers = append(a.functioncallParsers, ToolcallParserDefault)
 	}
-	a.functioncallParser = parse
 	return a
 }

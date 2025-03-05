@@ -1,4 +1,4 @@
-package evoloop
+package evotests
 
 type TestBuilder struct {
 	Id string `description:"ID of the test scenario, unique"`

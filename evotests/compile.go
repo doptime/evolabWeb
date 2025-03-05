@@ -1,4 +1,4 @@
-package evoloop
+package evotests
 
 // // TestModules 编译选择的模块并运行测试
 // func TestModules(scenario *TestScenario, modules []module.Module) bool {

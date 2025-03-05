@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/doptime/eloevo/agent"
-	"github.com/doptime/eloevo/elo"
 	"github.com/doptime/eloevo/models"
 	"github.com/doptime/eloevo/utils"
 	"github.com/doptime/redisdb"
@@ -114,7 +113,6 @@ AGI时代使用物流无人机/作为机器人载具的无人机会有丰富的�
 		return fmt.Errorf("商业场景需求名称和商业场景需求描述不能为空")
 	}
 	keyAircraftRequirement.HSet(name, &EloRequirements{
-		Elo:         elo.Elo{Id: redisdb.NanoId(8)},
 		Name:        name,
 		Requirement: Annotation,
 	})
@@ -122,10 +120,17 @@ AGI时代使用物流无人机/作为机器人载具的无人机会有丰富的�
 })
 
 type EloRequirements struct {
-	elo.Elo
+	Id          string
+	Score       float64
 	Name        string
 	Requirement string
 }
+
+func (e *EloRequirements) Elo(delta int) int {
+	e.Score += float64(delta)
+	return int(e.Score)
+}
+func (e *EloRequirements) GetId() string { return e.Id }
 
 var keyAircraftRequirement = redisdb.HashKey[string, *EloRequirements](redisdb.WithKey("AircraftRequirements"))
 var AircraftRequirements = map[string]*EloRequirements{}

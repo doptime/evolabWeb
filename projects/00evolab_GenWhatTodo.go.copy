@@ -1,4 +1,4 @@
-package agents
+package projects
 
 import (
 	"context"
@@ -16,6 +16,7 @@ var AgentGenNicheMarketOpportunity = agent.NewAgent(template.Must(template.New("
 请作为一位创新思维专家,生成一个在AGI时代可能出现的利基应用领域及其盈利机会.
 
 {{.Now}}
+
 
 约束条件:
 	说明:{{.RestrictionsAnnotation}}

@@ -1,4 +1,4 @@
-package evoloop
+package evotests
 
 import (
 	"context"

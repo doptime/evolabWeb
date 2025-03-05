@@ -1,4 +1,4 @@
-package evoloop
+package evotests
 
 import (
 	"fmt"
@@ -23,13 +23,12 @@ func (m *Model) String() string {
 		"Model:\n"+
 			"  Name: %s\n"+
 			"  ModelId: %s\n"+
-			"  EloScore: %d\n"+
 			"  Milestone: %.2f\n"+
 			"  ProblemToSolve: %v\n"+
 			"  DesignIdeas: %v\n"+
 			"  Dependencies: %v\n"+
 			"  DevelopFeedbacks: %v\n"+
 			"  CompileFeedbacks: %v",
-		m.Name, m.ModelId, m.EloScore, m.Milestone, m.ProblemToSolve, m.DesignIdeas, m.Dependencies, m.DevelopFeedbacks, m.CompileFeedbacks,
+		m.Name, m.ModelId, m.Milestone, m.ProblemToSolve, m.DesignIdeas, m.Dependencies, m.DevelopFeedbacks, m.CompileFeedbacks,
 	)
 }

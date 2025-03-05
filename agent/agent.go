@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"sync"
 	"text/template"
 	"time"
 
@@ -26,24 +27,26 @@ type FileToMem struct {
 // GoalProposer is responsible for proposing goals using an OpenAI model,
 // handling function calls, and managing callbacks.
 type Agent struct {
-	Model              *models.Model
-	Prompt             *template.Template
-	Tools              []openai.Tool
-	toolsCallbacks     map[string]func(Param interface{}) error
-	msgToMemKey        string
-	fileToMem          *FileToMem
-	msgDeFile          string
-	msgToFile          string
-	msgContentToFile   string
-	redisKey           string
-	fieldReaderFunc    FieldReaderFunc
-	msgDeCliboard      bool
-	memDeCliboardKey   string
-	functioncallParser func(resp openai.ChatCompletionResponse) (toolCalls []*FunctionCall)
+	Model               *models.Model
+	Prompt              *template.Template
+	Tools               []openai.Tool
+	toolsCallbacks      map[string]func(Param interface{}) error
+	msgToMemKey         string
+	fileToMem           *FileToMem
+	msgDeFile           string
+	msgToFile           string
+	msgContentToFile    string
+	redisKey            string
+	fieldReaderFunc     FieldReaderFunc
+	msgDeCliboard       bool
+	memDeCliboardKey    string
+	functioncallParsers []func(resp openai.ChatCompletionResponse) (toolCalls []*FunctionCall)
 
 	toolsInPrompt  bool
 	copyPromptOnly bool
 	CallBack       func(ctx context.Context, inputs string) error
+
+	ToolCallRunningMutext interface{}
 }
 
 func NewAgent(prompt *template.Template, tools ...tool.ToolInterface) (a *Agent) {
@@ -54,6 +57,10 @@ func NewAgent(prompt *template.Template, tools ...tool.ToolInterface) (a *Agent)
 	}
 	a.WithTools(tools...)
 	a.WithToolcallParser(nil)
+	return a
+}
+func (a *Agent) WithToolCallLocked() *Agent {
+	a.ToolCallRunningMutext = &sync.Mutex{}
 	return a
 }
 func (a *Agent) WithToolCallbacks(toolcallbacks map[string]func(Param interface{}) error) *Agent {
@@ -177,6 +184,7 @@ func (a *Agent) Call(ctx context.Context, memories ...map[string]any) (err error
 				Content: promptBuffer.String(),
 			},
 		},
+		TopP:      a.Model.TopP,
 		MaxTokens: 8192,
 		Tools:     a.Tools,
 	}
@@ -218,11 +226,28 @@ func (a *Agent) Call(ctx context.Context, memories ...map[string]any) (err error
 			tools.SaveToRedisHashKey(&tools.RedisHashKeyFieldValue{Key: a.redisKey, Field: field, Value: resp.Choices[0].Message.Content})
 		}
 	}
-	var toolCalls []*FunctionCall = a.functioncallParser(resp)
+	var toolCalls []*FunctionCall
+	for _, parser := range a.functioncallParsers {
+		toolCalls = append(toolCalls, parser(resp)...)
+	}
+	ToolCallHash := map[uint64]bool{}
 	for _, toolcall := range toolCalls {
+		//skip redundant toolcall
+		hash, _ := utils.GetCanonicalHash(toolcall.Arguments)
+		if _, ok := ToolCallHash[hash]; ok {
+			continue
+		}
+		ToolCallHash[hash] = true
+
 		_tool, ok := a.toolsCallbacks[toolcall.Name]
 		if ok {
-			_tool(toolcall.Arguments)
+			if a.ToolCallRunningMutext != nil {
+				a.ToolCallRunningMutext.(*sync.Mutex).Lock()
+				_tool(toolcall.Arguments)
+				a.ToolCallRunningMutext.(*sync.Mutex).Unlock()
+			} else {
+				_tool(toolcall.Arguments)
+			}
 		} else if !ok {
 			return fmt.Errorf("error: function not found in FunctionMap")
 		}

@@ -1,4 +1,4 @@
-package evoloop
+package evotests
 
 import (
 	"context"
@@ -106,13 +106,13 @@ func GeSolutionModule() {
 					Catalogue: chooser.Pick().(string),
 				}
 
-				testGroup := lo.Filter(lo.Values(AircraftTests), func(ts *TestScenario, i int) bool {
-					return ts.Catalogue == testScenario.Catalogue
-				})
-				//shuffle testGroup
-				if lo.Shuffle(testGroup); len(testGroup) > 15 {
-					testGroup = testGroup[:15]
-				}
+				// testGroup := lo.Filter(lo.Values(AircraftTests), func(ts *TestScenario, i int) bool {
+				// 	return ts.Catalogue == testScenario.Catalogue
+				// })
+				// //shuffle testGroup
+				// if lo.Shuffle(testGroup); len(testGroup) > 15 {
+				// 	testGroup = testGroup[:15]
+				// }
 
 				var inputsParams = map[string]any{
 					"test": testScenario,

@@ -6,27 +6,14 @@ import (
 	"github.com/samber/lo"
 )
 
-// Elo 表示每个玩家的状态，包括评分、比赛次数和唯一标识符
-type BElo interface {
-	Id() string
-	Rating(delta int) int
-}
-
-const BatchD = 400
-
-// ExpectedScore 计算玩家 A 相对于玩家 B 的预期胜率
-func ExpectedScore(RatingA int, RatingB int) float64 {
-	return 1 / (1 + math.Pow(10, float64(RatingA-RatingB)/float64(BatchD)))
-}
-
-// BatchUpdateRatings updates Elo ratings for a list of winners and players
-func BatchUpdateRatings(winners []BElo, players []BElo, matchId string) {
+// BatchUpdateWinnings updates Elo ratings for a list of winners and players
+func BatchUpdateWinnings(winners []Elo, players []Elo, matchId string) {
 	// Create a map for quick lookup of winners
-	winnerMap := lo.SliceToMap(winners, func(m BElo) (string, struct{}) { return m.Id(), struct{}{} })
+	winnerMap := lo.SliceToMap(winners, func(m Elo) (string, struct{}) { return m.GetId(), struct{}{} })
 
 	// Identify the losers
-	losers := lo.Filter(players, func(m BElo, _ int) bool {
-		_, exists := winnerMap[m.Id()]
+	losers := lo.Filter(players, func(m Elo, _ int) bool {
+		_, exists := winnerMap[m.GetId()]
 		return !exists
 	})
 
@@ -38,32 +25,25 @@ func BatchUpdateRatings(winners []BElo, players []BElo, matchId string) {
 	// Initialize maps to store expected and actual scores
 	expectedScores := make(map[string]float64, len(players))
 	actualScores := make(map[string]float64, len(players))
+	comparisonsNum := make(map[string]float64, len(players))
 
 	// Calculate expected and actual scores for each player
 	for _, winner := range winners {
 		for _, loser := range losers {
 			// Aggregate expected scores for both winner and loser
-			expectedScores[winner.Id()] += ExpectedScore(winner.Rating(0), loser.Rating(0))
-			expectedScores[loser.Id()] += ExpectedScore(loser.Rating(0), winner.Rating(0))
-
+			expectedScores[winner.GetId()] += ExpectedScoreA(winner.Elo(), loser.Elo())
+			expectedScores[loser.GetId()] += ExpectedScoreA(loser.Elo(), winner.Elo())
+			comparisonsNum[winner.GetId()]++
+			comparisonsNum[loser.GetId()]++
 			// Set actual scores based on win/loss
-			actualScores[winner.Id()] += 1.0
+			actualScores[winner.GetId()] += 1.0
 		}
 	}
 
 	// Update ratings for each player
 	for _, player := range players {
-		expected, actual := expectedScores[player.Id()], actualScores[player.Id()]
-		var numComparisons float64
-
-		if _, isWinner := winnerMap[player.Id()]; isWinner {
-			// Winner compares against all losers
-			numComparisons = float64(len(losers))
-		} else {
-			// Loser compares against all winners
-			numComparisons = float64(len(winners))
-		}
-
+		expected, actual := expectedScores[player.GetId()], actualScores[player.GetId()]
+		var numComparisons float64 = comparisonsNum[player.GetId()]
 		// Avoid division by zero
 		if numComparisons == 0 {
 			continue
@@ -71,10 +51,61 @@ func BatchUpdateRatings(winners []BElo, players []BElo, matchId string) {
 
 		// Calculate rating change
 		k := 20
-		delta := (actual/numComparisons - expected/numComparisons) * float64(k)
+		delta := ((actual - expected) / numComparisons) * float64(k)
 		deltaInt := int(math.Round(delta))
 
 		// Update the player's rating
-		player.Rating(deltaInt)
+		player.Elo(deltaInt)
+	}
+}
+
+// BatchUpdateRanking 更新 Elo 评分，playersRanked 按排名顺序排列，前面的玩家胜出
+func BatchUpdateRanking(playersRanked ...Elo) {
+	// 获取玩家数量
+	numPlayers := len(playersRanked)
+
+	// 如果没有玩家或只有一个玩家，无需更新
+	if numPlayers < 2 {
+		return
+	}
+
+	// 计算每个玩家的预期得分和实际得分
+	expectedScores := make(map[string]float64, numPlayers)
+	actualScores := make(map[string]float64, numPlayers)
+	comparisonsNum := make(map[string]float64, numPlayers)
+
+	// 遍历每个玩家并计算其与其他玩家的预期得分
+	for i := 0; i < numPlayers; i++ {
+		for j := i + 1; j < numPlayers; j++ {
+			// 玩家 i 胜出，玩家 j 败北
+			winner, loser := playersRanked[i], playersRanked[j]
+			if winner.GetId() == loser.GetId() {
+				continue
+			}
+
+			// 计算预期得分
+			expectedScores[winner.GetId()] += ExpectedScoreA(winner.Elo(), loser.Elo())
+			expectedScores[loser.GetId()] += ExpectedScoreA(loser.Elo(), winner.Elo())
+			comparisonsNum[winner.GetId()]++
+			comparisonsNum[loser.GetId()]++
+
+			// 记录实际得分
+			actualScores[winner.GetId()] += 1.0
+			//actualScores[loser.GetId()] += 0.0
+		}
+	}
+
+	// 更新每个玩家的 Elo 评分
+	for _, player := range playersRanked {
+		expected := expectedScores[player.GetId()]
+		actual := actualScores[player.GetId()]
+
+		// 计算评级变化值
+		k := 20
+		delta := (actual - expected) / comparisonsNum[player.GetId()] * float64(k)
+		deltaInt := int(math.Round(delta))
+
+		// 更新玩家评分
+		player.Elo(deltaInt)
 	}
 }
