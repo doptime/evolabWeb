@@ -17,15 +17,15 @@ func main() {
 	//agents.AgentFunctioncallTest.WithModel(models.FuseO1).Call(context.Background(), map[string]any{})
 	//go memory.AutoSaveSharedMemory()
 	//argsString := strings.Join(os.Args, " ")
-	argsString := "RationalCognitionFrameworkExploration"
+	argsString := "projects"
 
 	if strings.Contains(argsString, "GenBusinessPlanParallel") {
 		projects.GenBusinessPlanParallel()
-	} else if strings.Contains(argsString, "AntiAgingExploration") {
-		evotests.AntiAgingExploration()
-		return
-	} else if strings.Contains(argsString, "RationalCognitionFrameworkExploration") {
-		projects.RationalCognitionFrameworkExploration()
+	} else if strings.Contains(argsString, "projects") {
+		//projects.RationalCognitionFrameworkExploration()
+		projects.BusinessClusteringExploration()
+		//projects.BusinessUtilityExploration()
+		//projects.PersonalAdminExploration()
 		return
 	} else if strings.Contains(argsString, "clustering") {
 		agents.Clustering()

@@ -132,7 +132,7 @@ func (e *EloRequirements) Elo(delta int) int {
 }
 func (e *EloRequirements) GetId() string { return e.Id }
 
-var keyAircraftRequirement = redisdb.HashKey[string, *EloRequirements](redisdb.WithKey("AircraftRequirements"))
+var keyAircraftRequirement = redisdb.HashKey[string, *EloRequirements](redisdb.Opt.Key("AircraftRequirements"))
 var AircraftRequirements = map[string]*EloRequirements{}
 
 // GenNicheMarketOpportunityParallel calls GenNicheMarketOpportunity 1000 times in 16 parallel threads.

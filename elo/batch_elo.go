@@ -7,7 +7,7 @@ import (
 )
 
 // BatchUpdateWinnings updates Elo ratings for a list of winners and players
-func BatchUpdateWinnings(winners []Elo, players []Elo, matchId string) {
+func BatchUpdateWinnings(winners []Elo, players []Elo) {
 	// Create a map for quick lookup of winners
 	winnerMap := lo.SliceToMap(winners, func(m Elo) (string, struct{}) { return m.GetId(), struct{}{} })
 
@@ -72,7 +72,6 @@ func BatchUpdateRanking(playersRanked ...Elo) {
 	// 计算每个玩家的预期得分和实际得分
 	expectedScores := make(map[string]float64, numPlayers)
 	actualScores := make(map[string]float64, numPlayers)
-	comparisonsNum := make(map[string]float64, numPlayers)
 
 	// 遍历每个玩家并计算其与其他玩家的预期得分
 	for i := 0; i < numPlayers; i++ {
@@ -86,8 +85,6 @@ func BatchUpdateRanking(playersRanked ...Elo) {
 			// 计算预期得分
 			expectedScores[winner.GetId()] += ExpectedScoreA(winner.Elo(), loser.Elo())
 			expectedScores[loser.GetId()] += ExpectedScoreA(loser.Elo(), winner.Elo())
-			comparisonsNum[winner.GetId()]++
-			comparisonsNum[loser.GetId()]++
 
 			// 记录实际得分
 			actualScores[winner.GetId()] += 1.0
@@ -102,7 +99,7 @@ func BatchUpdateRanking(playersRanked ...Elo) {
 
 		// 计算评级变化值
 		k := 20
-		delta := (actual - expected) / comparisonsNum[player.GetId()] * float64(k)
+		delta := (actual - expected) * float64(k)
 		deltaInt := int(math.Round(delta))
 
 		// 更新玩家评分

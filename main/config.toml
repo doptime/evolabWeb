@@ -30,6 +30,16 @@ Password = "XWkHqup04Gcm7Plieh5x"
 Port = 6379
 Username = ""
 
+[[Redis]]
+DB = 1
+Host = "projects.lan"
+Name = "Catalogs"
+Password = "XWkHqup04Gcm7Plieh5x"
+Port = 6379
+Username = ""
+
+
+
 # [[Redis]]
 # DB = 2
 # Host = "keydb.lan"

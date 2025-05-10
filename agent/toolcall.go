@@ -43,6 +43,8 @@ func ToolcallParserDefault(resp openai.ChatCompletionResponse) (toolCalls []*Fun
 		rsp = strings.ReplaceAll(rsp, "\n```", "<tool_call>")
 		rsp = strings.ReplaceAll(rsp, "```\n", "<tool_call>")
 
+		rsp = strings.ReplaceAll(rsp, "```tool_call>", "<tool_call>")
+
 		items := strings.Split(rsp, "<tool_call>")
 		//case json only
 		if len(items) > 3 {
