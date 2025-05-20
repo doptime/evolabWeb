@@ -2,18 +2,18 @@
 
 // --- Mock Data ---
 const initialMockBacklogs = [
-    { Id: 'b1', Info: 'Initial backlog item 1', Reference: 'REF-001', Sponsor: 'Client A', CreateAt: new Date(Date.now() - 100000).toISOString(), EditAt: new Date(Date.now() - 50000).toISOString(), Expired: false, Accomplished: false },
-    { Id: 'b2', Info: 'Another backlog item, this one is accomplished', Reference: 'REF-002', Sponsor: 'Client B', CreateAt: new Date(Date.now() - 200000).toISOString(), EditAt: new Date(Date.now() - 150000).toISOString(), Expired: false, Accomplished: true },
-    { Id: 'b3', Info: 'Expired item', Reference: 'REF-003', Sponsor: 'Client A', CreateAt: new Date(Date.now() - 300000).toISOString(), EditAt: new Date(Date.now() - 250000).toISOString(), Expired: true, Accomplished: false },
+    { Id: 'b1', Info: 'Initial backlog item 1', Reference: 'REF-001', Sponsor: 'Client A', UpdateAt: new Date(Date.now() - 100000).toISOString(), EditAt: new Date(Date.now() - 50000).toISOString(), Expired: false, Accomplished: false },
+    { Id: 'b2', Info: 'Another backlog item, this one is accomplished', Reference: 'REF-002', Sponsor: 'Client B', UpdateAt: new Date(Date.now() - 200000).toISOString(), EditAt: new Date(Date.now() - 150000).toISOString(), Expired: false, Accomplished: true },
+    { Id: 'b3', Info: 'Expired item', Reference: 'REF-003', Sponsor: 'Client A', UpdateAt: new Date(Date.now() - 300000).toISOString(), EditAt: new Date(Date.now() - 250000).toISOString(), Expired: true, Accomplished: false },
   ];
   
   const initialMockSolutionNodes = [
-    { Id: 'sg1', Item: 'Leveraging Smartphone SoC Technology for Core Control', SuperEdge: true, SuperEdgeNodes: [], Importance: 9, Priority: 0, Elo: 0, ChapterSession: '1', Pathname: 'CoreControl/SoC', Locked: false, Incremental: true, CreateAt: new Date(Date.now() - 500000).toISOString(), EditAt: new Date(Date.now() - 50000).toISOString() },
-    { Id: 'sg2', Item: 'Safety, Reliability, and Regulatory Compliance', SuperEdge: true, SuperEdgeNodes: [], Importance: 10, Priority: 0, Elo: 1041.00, ChapterSession: '2', Pathname: 'Safety/Compliance', Locked: true, Incremental: false, CreateAt: new Date(Date.now() - 400000).toISOString(), EditAt: new Date(Date.now() - 100000).toISOString() },
-    { Id: 'sg3', Item: 'Standardized Modular Interfaces (Mechanical, Power, Data)', SuperEdge: true, SuperEdgeNodes: ['sg4'], Importance: 10, Priority: 1, Elo: 1038.00, ChapterSession: '3', Pathname: 'Interfaces/Modular', Locked: false, Incremental: false, CreateAt: new Date(Date.now() - 300000).toISOString(), EditAt: new Date(Date.now() - 200000).toISOString() },
-    { Id: 'sg4', Item: '支持无线充电的模块化电池架构', SuperEdge: false, SuperEdgeNodes: [], Importance: 9, Priority: 0, Elo: 0, ChapterSession: '3', Pathname: 'Interfaces/Battery', Locked: false, Incremental: true, CreateAt: new Date(Date.now() - 250000).toISOString(), EditAt: new Date(Date.now() - 180000).toISOString() },
-    { Id: 'sg5', Item: '机身(包裹)可拆卸，可以动态装配到固定翼和多旋翼无人机上。', SuperEdge: true, SuperEdgeNodes: [], Importance: 9, Priority: 0, Elo: 0, ChapterSession: '3.1', Pathname: 'Airframe/ModularDesign', Locked: false, Incremental: false, CreateAt: new Date(Date.now() - 200000).toISOString(), EditAt: new Date(Date.now() - 120000).toISOString() },
-    { Id: 'sg6', Item: 'Another item in Chapter 1', SuperEdge: false, SuperEdgeNodes: [], Importance: 7, Priority: 2, Elo: 0, ChapterSession: '1', Pathname: 'CoreControl/Another', Locked: false, Incremental: false, CreateAt: new Date(Date.now() - 100000).toISOString(), EditAt: new Date(Date.now() - 30000).toISOString() },
+    { Id: 'sg1', Item: 'Leveraging Smartphone SoC Technology for Core Control', SuperEdge: true, SuperEdgeNodes: [], Importance: 9, Priority: 0, Elo: 0, ChapterSession: '1', Pathname: 'CoreControl/SoC', Locked: false, Incremental: true, UpdateAt: new Date(Date.now() - 500000).toISOString(), EditAt: new Date(Date.now() - 50000).toISOString() },
+    { Id: 'sg2', Item: 'Safety, Reliability, and Regulatory Compliance', SuperEdge: true, SuperEdgeNodes: [], Importance: 10, Priority: 0, Elo: 1041.00, ChapterSession: '2', Pathname: 'Safety/Compliance', Locked: true, Incremental: false, UpdateAt: new Date(Date.now() - 400000).toISOString(), EditAt: new Date(Date.now() - 100000).toISOString() },
+    { Id: 'sg3', Item: 'Standardized Modular Interfaces (Mechanical, Power, Data)', SuperEdge: true, SuperEdgeNodes: ['sg4'], Importance: 10, Priority: 1, Elo: 1038.00, ChapterSession: '3', Pathname: 'Interfaces/Modular', Locked: false, Incremental: false, UpdateAt: new Date(Date.now() - 300000).toISOString(), EditAt: new Date(Date.now() - 200000).toISOString() },
+    { Id: 'sg4', Item: '支持无线充电的模块化电池架构', SuperEdge: false, SuperEdgeNodes: [], Importance: 9, Priority: 0, Elo: 0, ChapterSession: '3', Pathname: 'Interfaces/Battery', Locked: false, Incremental: true, UpdateAt: new Date(Date.now() - 250000).toISOString(), EditAt: new Date(Date.now() - 180000).toISOString() },
+    { Id: 'sg5', Item: '机身(包裹)可拆卸，可以动态装配到固定翼和多旋翼无人机上。', SuperEdge: true, SuperEdgeNodes: [], Importance: 9, Priority: 0, Elo: 0, ChapterSession: '3.1', Pathname: 'Airframe/ModularDesign', Locked: false, Incremental: false, UpdateAt: new Date(Date.now() - 200000).toISOString(), EditAt: new Date(Date.now() - 120000).toISOString() },
+    { Id: 'sg6', Item: 'Another item in Chapter 1', SuperEdge: false, SuperEdgeNodes: [], Importance: 7, Priority: 2, Elo: 0, ChapterSession: '1', Pathname: 'CoreControl/Another', Locked: false, Incremental: false, UpdateAt: new Date(Date.now() - 100000).toISOString(), EditAt: new Date(Date.now() - 30000).toISOString() },
   ];
   
   // --- Backlog API Mocks ---
@@ -26,7 +26,7 @@ const initialMockBacklogs = [
   export const createBacklogAPI = async (backlogData) => {
     console.log("API: Creating backlog...", backlogData);
     // TODO: Implement actual API call
-    const newBacklog = { ...backlogData, Id: `b${Date.now()}`, CreateAt: new Date().toISOString(), EditAt: new Date().toISOString() };
+    const newBacklog = { ...backlogData, Id: `b${Date.now()}`, UpdateAt: new Date().toISOString(), EditAt: new Date().toISOString() };
     initialMockBacklogs.push(newBacklog); // Simulate DB update
     return new Promise(resolve => setTimeout(() => resolve(newBacklog), 300));
   };

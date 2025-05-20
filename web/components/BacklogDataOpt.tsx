@@ -1,29 +1,25 @@
-// components/BacklogDataOpt.tsx
+// components/BacklogDataOpt.jsx
 "use client";
-
-export interface Backlog {
-  Id: string;
-  Info: string;
-  Reference: string;
-  Sponsor: string;
-  CreateAt: string; // ISO string date
-  EditAt: string;   // ISO string date
-  Expired: boolean;
-  Done: boolean; // 'Accomplished'から'Done'に変更
-}
 
 // --- API Mock Implementations ---
 // TODO: Replace with actual API calls
+import Option, { listKey } from "doptime-client";
+
 
 const MOCK_DELAY = 500;
 
-let mockBacklogs: Backlog[] = [
+
+let mockBacklogs = [
   { Id: '1', Info: 'Initial Backlog Item 1', Reference: 'REF-001', Sponsor: 'Client A', CreateAt: new Date(Date.now() - 86400000 * 2).toISOString(), EditAt: new Date(Date.now() - 86400000).toISOString(), Expired: false, Done: false },
   { Id: '2', Info: 'Initial Backlog Item 2 - Done', Reference: 'REF-002', Sponsor: 'Client B', CreateAt: new Date(Date.now() - 86400000 * 3).toISOString(), EditAt: new Date(Date.now() - 86400000 * 1.5).toISOString(), Expired: false, Done: true },
   { Id: '3', Info: 'Initial Backlog Item 3 - Expired', Reference: 'REF-003', Sponsor: 'Client C', CreateAt: new Date(Date.now() - 86400000 * 4).toISOString(), EditAt: new Date(Date.now() - 86400000 * 2.5).toISOString(), Expired: true, Done: false },
 ];
 
-export const fetchBacklogsAPI = async (): Promise<Backlog[]> => {
+/**
+ * Fetches all backlog items.
+ * @returns {Promise<Backlog[]>}
+ */
+export const fetchBacklogsAPI = async () => {
   console.log("API: Fetching backlogs...");
   return new Promise(resolve => {
     setTimeout(() => {
@@ -34,11 +30,21 @@ export const fetchBacklogsAPI = async (): Promise<Backlog[]> => {
   });
 };
 
-export const createBacklogAPI = async (backlogData: Omit<Backlog, 'Id' | 'CreateAt' | 'EditAt'> & { Expired: boolean; Done: boolean }): Promise<Backlog> => {
+/**
+ * Creates a new backlog item.
+ * @param {Object} backlogData - The data for the new backlog.
+ * @param {string} backlogData.Info
+ * @param {string} backlogData.Reference
+ * @param {string} backlogData.Sponsor
+ * @param {boolean} backlogData.Expired
+ * @param {boolean} backlogData.Done
+ * @returns {Promise<Backlog>}
+ */
+export const createBacklogAPI = async (backlogData) => {
   console.log("API: Creating backlog...", backlogData);
   return new Promise(resolve => {
     setTimeout(() => {
-      const newBacklog: Backlog = {
+      const newBacklog = {
         ...backlogData,
         Id: `new-${Date.now()}-${Math.random().toString(16).slice(2)}`,
         CreateAt: new Date().toISOString(),
@@ -50,7 +56,18 @@ export const createBacklogAPI = async (backlogData: Omit<Backlog, 'Id' | 'Create
   });
 };
 
-export const updateBacklogAPI = async (backlogData: Partial<Backlog> & { Id: string }): Promise<Backlog> => {
+/**
+ * Updates an existing backlog item.
+ * @param {Object} backlogData - The data to update, must include Id.
+ * @param {string} backlogData.Id
+ * @param {string} [backlogData.Info]
+ * @param {string} [backlogData.Reference]
+ * @param {string} [backlogData.Sponsor]
+ * @param {boolean} [backlogData.Expired]
+ * @param {boolean} [backlogData.Done]
+ * @returns {Promise<Backlog>}
+ */
+export const updateBacklogAPI = async (backlogData) => {
   console.log("API: Updating backlog...", backlogData);
   return new Promise((resolve, reject) => {
     setTimeout(() => {
@@ -65,7 +82,12 @@ export const updateBacklogAPI = async (backlogData: Partial<Backlog> & { Id: str
   });
 };
 
-export const deleteBacklogAPI = async (backlogId: string): Promise<void> => {
+/**
+ * Deletes a backlog item.
+ * @param {string} backlogId
+ * @returns {Promise<void>}
+ */
+export const deleteBacklogAPI = async (backlogId) => {
   console.log("API: Deleting backlog...", backlogId);
   return new Promise(resolve => {
     setTimeout(() => {
@@ -76,14 +98,19 @@ export const deleteBacklogAPI = async (backlogId: string): Promise<void> => {
 };
 
 // --- Session Storage Utilities ---
-// These could also be in a general utils file
 
-export const loadStateFromSessionStorage = <T>(key: string, defaultValue: T): T => {
+/**
+ * Loads state from session storage.
+ * @param {string} key - The key to retrieve from session storage.
+ * @param {*} defaultValue - The default value to return if the key is not found or an error occurs.
+ * @returns {*} The stored value or the default value.
+ */
+export const loadStateFromSessionStorage = (key, defaultValue) => {
   if (typeof window !== 'undefined') {
     const storedValue = sessionStorage.getItem(key);
     if (storedValue) {
       try {
-        return JSON.parse(storedValue) as T;
+        return JSON.parse(storedValue);
       } catch (error) {
         console.error(`Error parsing sessionStorage item ${key}:`, error);
         return defaultValue;
@@ -93,7 +120,12 @@ export const loadStateFromSessionStorage = <T>(key: string, defaultValue: T): T 
   return defaultValue;
 };
 
-export const saveStateToSessionStorage = <T>(key: string, value: T): void => {
+/**
+ * Saves state to session storage.
+ * @param {string} key - The key to store the value under in session storage.
+ * @param {*} value - The value to store (will be stringified).
+ */
+export const saveStateToSessionStorage = (key, value) => {
   if (typeof window !== 'undefined') {
     try {
       sessionStorage.setItem(key, JSON.stringify(value));
@@ -102,3 +134,7 @@ export const saveStateToSessionStorage = <T>(key: string, value: T): void => {
     }
   }
 };
+
+
+
+
