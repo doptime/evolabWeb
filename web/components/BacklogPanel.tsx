@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   fetchBacklogsAPI, createBacklogAPI, updateBacklogAPI, deleteBacklogAPI,
-  loadStateFromSessionStorage, saveStateToSessionStorage, keyAntiAgingBacklog, Backlog
+  loadStateFromSessionStorage, saveStateToSessionStorage, // Backlog is removed as it's defined locally now
 } from './BacklogDataOpt'; // Updated import path
 import {
   IconPlus,
@@ -11,40 +11,41 @@ import {
   IconCheckCircle, IconCircle
 } from './icons'; // Adjust path as needed
 import {listKey, OptDefaults} from 'doptime-client';
-OptDefaults({urlBase: "http://127.0.0.1:81" });
 
-console.log("Option setUrlbase:", Option.baseUrl);
-export interface Backlog {
+export interface Backlog { // Local definition, adjusted types
   Id: string;
   Info: string;
   Reference: string;
   Sponsor: string;
-  CreateAt: Date | string;
-  EditAt: Date | string;
+  CreateAt: Date; // Changed to Date
+  EditAt: Date;   // Changed to Date
   Expired: boolean;
   Done: boolean;
 }
-export const keyAntiAgingBacklog = new listKey<Backlog>("AntiAgingBacklog")
+
+export const keyAntiAgingBacklog = new listKey<Backlog>("AntiAgingBacklog");
+
 
 const BacklogPanel = () => {
   const [backlogs, setBacklogs] = useState<Backlog[]>([]);
-  const [selectedBacklogId, setSelectedBacklogId] = useState(null);
-  const [editingBacklogId, setEditingBacklogId] = useState(null);
+  const [selectedBacklogId, setSelectedBacklogId] = useState<string | null>(null);
+  const [editingBacklogId, setEditingBacklogId] = useState<string | null>(null);
   const [editingContent, setEditingContent] = useState({ Info: '', Reference: '', Sponsor: '' });
   const [showExpired, setShowExpired] = useState(false);
   const [showDone, setShowDone] = useState(false);
-  const editInputRef = useRef(null);
-  const backlogListRef = useRef(null);
+  const editInputRef = useRef<HTMLTextAreaElement>(null);
+  const backlogListRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    // const loadData = async () => {
-    //   const data = await fetchBacklogsAPI();
-    //   setBacklogs(data.sort((a, b) => new Date(b.EditAt).getTime() - new Date(a.EditAt).getTime()));
-    // };
-    // loadData();
+    OptDefaults({urlBase: "http://127.0.0.1:81" });
 
     keyAntiAgingBacklog.lRange(0, -1).then((data) => {
-      setBacklogs(data ?? []);
+      // Ensure data is an array and items conform to Backlog interface
+      // Dates now *must* be parsed if they are strings from Redis:
+      const parsedData = (data || []).map(item => ({
+        ...item,
+      }));
+      setBacklogs(parsedData.sort((a, b) => b.EditAt.getTime() - a.EditAt.getTime())); // Compare Date objects directly
     });
 
     setSelectedBacklogId(loadStateFromSessionStorage('selectedBacklogId', null));
@@ -58,18 +59,19 @@ const BacklogPanel = () => {
 
   const sortedAndFilteredBacklogs = backlogs
     .filter(b => (showExpired || !b.Expired) && (showDone || !b.Done))
-    .sort((a, b) => new Date(b.EditAt).getTime() - new Date(a.EditAt).getTime());
+    .sort((a, b) => b.EditAt.getTime() - a.EditAt.getTime()); // Compare Date objects directly
 
   const handleCreateNew = () => {
     const newTempId = `new-${Date.now()}`;
     setEditingContent({ Info: '', Reference: '', Sponsor: '' });
     setEditingBacklogId(newTempId);
     setSelectedBacklogId(null);
-    setBacklogs(prev => [{ Id: newTempId, Info: '', Reference: '', Sponsor: '', EditAt: new Date().toISOString(), CreateAt: new Date().toISOString(), Expired: false, Done: false }, ...prev]);
+    // Add a complete backlog item structure locally
+    setBacklogs(prev => [{ Id: newTempId, Info: '', Reference: '', Sponsor: '', Expired: false, Done: false }, ...prev]);
     setTimeout(() => editInputRef.current?.focus(), 0);
   };
 
-  const handleSaveEdit = async (id) => {
+  const handleSaveEdit = async (id: string) => {
     if (!editingContent.Info.trim()) {
       if (id.startsWith('new-')) {
         setBacklogs(prev => prev.filter(b => b.Id !== id));
@@ -78,21 +80,59 @@ const BacklogPanel = () => {
       return;
     }
     try {
-      let updatedBacklog;
-      const payload = { ...editingContent, EditAt: new Date().toISOString() };
+      let finalBacklog: Backlog;
+      const editTime = new Date(); // Use Date object
+      const commonPayload = { ...editingContent, EditAt: editTime };
 
       if (id.startsWith('new-')) {
-        keyAntiAgingBacklog.lPush({ Id: id, ...payload, Expired: false, Done: false })
-        updatedBacklog = await createBacklogAPI({ ...payload, Expired: false, Done: false });
-        setBacklogs(prev => [updatedBacklog, ...prev.filter(b => b.Id !== id)].sort((a, b) => new Date(b.EditAt).getTime() - new Date(a.EditAt).getTime()));
-      } else {
+        const newBacklogData: Omit<Backlog, 'Id'> = { // Data for API shouldn't include temp Id
+            Info: commonPayload.Info,
+            Reference: commonPayload.Reference,
+            Sponsor: commonPayload.Sponsor,
+            CreateAt:  new Date(),
+            EditAt:  new Date(),
+            Expired: false,
+            Done: false
+        };
+
+        const createdApiBacklog = await createBacklogAPI(newBacklogData);
+        // Ensure createdApiBacklog also has Date objects for CreateAt and EditAt
+        finalBacklog = {
+            ...createdApiBacklog,
+        };
+
+        console.log("Created backlog:", finalBacklog);
+        await keyAntiAgingBacklog.lPush(finalBacklog);
+
+        setBacklogs(prev => [finalBacklog, ...prev.filter(b => b.Id !== id)].sort((a, b) => b.EditAt.getTime() - a.EditAt.getTime()));
+        setSelectedBacklogId(finalBacklog.Id);
+
+      } else { // Existing item
         const originalBacklog = backlogs.find(b => b.Id === id);
-        var newBacklog = { Id: id, ...originalBacklog, ...payload };
-        KeyAntiAgingBacklog.lSet(id, newBacklog)
-        //updatedBacklog = await updateBacklogAPI({ Id: id, ...originalBacklog, ...payload });
-        setBacklogs(prev => prev.map(b => b.Id === id ? newBacklog : b).sort((a, b) => new Date(b.EditAt).getTime() - new Date(a.EditAt).getTime()));
+        if (!originalBacklog) {
+            console.error("Error saving: Original backlog not found for ID:", id);
+            setEditingBacklogId(null);
+            return;
+        }
+        const updatedBacklogObject: Backlog = {
+            ...originalBacklog,
+            ...commonPayload, // Info, Reference, Sponsor, EditAt
+            Id: id
+        };
+
+        const itemIndex = backlogs.findIndex(b => b.Id === id);
+        if (itemIndex !== -1) {
+            await keyAntiAgingBacklog.lSet(itemIndex, updatedBacklogObject);
+            finalBacklog = updatedBacklogObject;
+        } else {
+             console.error("Error updating: Backlog item not found in local state for index for ID:", id);
+             setEditingBacklogId(null);
+             return;
+        }
+        
+        setBacklogs(prev => prev.map(b => b.Id === id ? finalBacklog : b).sort((a, b) => b.EditAt.getTime() - a.EditAt.getTime()));
+        setSelectedBacklogId(finalBacklog.Id);
       }
-      setSelectedBacklogId(updatedBacklog.Id);
     } catch (error) {
       console.error("Error saving backlog:", error);
       if (id.startsWith('new-')) {
@@ -103,7 +143,7 @@ const BacklogPanel = () => {
     }
   };
 
-  const handleItemClick = (backlogId) => {
+  const handleItemClick = (backlogId: string) => {
     if (editingBacklogId && editingBacklogId !== backlogId) {
       const currentEditingItem = backlogs.find(b => b.Id === editingBacklogId);
       if (currentEditingItem && editingBacklogId.startsWith('new-') && !editingContent.Info.trim()) {
@@ -114,14 +154,20 @@ const BacklogPanel = () => {
     setSelectedBacklogId(backlogId);
   };
 
-  const handleDoubleClickToEdit = (backlog) => {
+  const handleDoubleClickToEdit = (backlog: Backlog) => {
+    if (editingBacklogId && editingBacklogId !== backlog.Id && editingBacklogId.startsWith('new-')) {
+        const currentNewItem = backlogs.find(b => b.Id === editingBacklogId);
+        if (currentNewItem && !currentNewItem.Info.trim()){
+            setBacklogs(prev => prev.filter(b => b.Id !== editingBacklogId));
+        }
+    }
     setEditingBacklogId(backlog.Id);
-    setEditingContent({ Info: backlog.Info, Reference: backlog.Reference, Sponsor: backlog.Sponsor });
+    setEditingContent({ Info: backlog.Info, Reference: backlog.Reference || '', Sponsor: backlog.Sponsor || '' });
     setSelectedBacklogId(backlog.Id);
     setTimeout(() => editInputRef.current?.focus(), 0);
   };
 
-  const handleCancelEdit = (id) => {
+  const handleCancelEdit = (id: string) => {
     if (id.startsWith('new-')) {
       setBacklogs(prev => prev.filter(b => b.Id !== id));
     }
@@ -131,9 +177,22 @@ const BacklogPanel = () => {
 
   const handleDeleteSelectedWithConfirmation = async () => {
     if (!selectedBacklogId || editingBacklogId === selectedBacklogId) return;
+
     if (window.confirm('Are you sure you want to delete this backlog item? This action cannot be undone.')) {
       try {
+        const itemToDelete = backlogs.find(b => b.Id === selectedBacklogId);
+        if (!itemToDelete) {
+            console.error("Item to delete not found in local state.");
+            return;
+        }
+
         await deleteBacklogAPI(selectedBacklogId);
+
+        const removedCount = await keyAntiAgingBacklog.lRem(1, itemToDelete);
+        if (removedCount === 0) {
+            console.warn("Item not found in keyAntiAgingBacklog for lRem, or value didn't match:", itemToDelete);
+        }
+
         setBacklogs(prev => prev.filter(b => b.Id !== selectedBacklogId));
         setSelectedBacklogId(null);
       } catch (error) {
@@ -142,22 +201,35 @@ const BacklogPanel = () => {
     }
   };
 
-  const toggleBacklogProperty = async (backlogId, property) => {
-    const backlog = backlogs.find(b => b.Id === backlogId);
-    if (backlog) {
-      try {
-        const updatedPayload = { Id: backlogId, [property]: !backlog[property], EditAt: new Date().toISOString() };
-        KeyAntiAgingBacklog.lPush(updatedPayload)
-        //const updatedBacklog = await updateBacklogAPI(updatedPayload);
-        setBacklogs(prev => prev.map(b => b.Id === backlogId ? updatedPayload : b).sort((a, b) => new Date(b.EditAt).getTime() - new Date(a.EditAt).getTime()));
-      } catch (error) {
-        console.error(`Error toggling ${property} for ${backlogId}:`, error);
-      }
+  const toggleBacklogProperty = async (backlogId: string, property: 'Expired' | 'Done') => {
+    const backlogIndex = backlogs.findIndex(b => b.Id === backlogId);
+    if (backlogIndex === -1) {
+        console.error("Cannot toggle property: backlog not found in local state for ID:", backlogId);
+        return;
+    }
+    const originalBacklog = backlogs[backlogIndex];
+
+    const updatedBacklog: Backlog = {
+      ...originalBacklog,
+      [property]: !originalBacklog[property],
+      EditAt: new Date() // Use Date object directly
+    };
+
+    try {
+      await keyAntiAgingBacklog.lSet(backlogIndex, updatedBacklog);
+      setBacklogs(prev => {
+        const newBacklogs = [...prev];
+        newBacklogs[backlogIndex] = updatedBacklog;
+        return newBacklogs.sort((a, b) => b.EditAt.getTime() - a.EditAt.getTime());
+      });
+
+    } catch (error) {
+      console.error(`Error toggling ${property} for ${backlogId}:`, error);
     }
   };
 
-  const handleKeyDown = useCallback((event) => {
-    const activeElementIsInput = document.activeElement?.tagName === 'INPUT' || document.activeElement?.tagName === 'TEXTAREA';
+  const handleKeyDown = useCallback((event: React.KeyboardEvent | KeyboardEvent) => {
+    const activeElementIsInput = document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement;
 
     if (editingBacklogId && activeElementIsInput) {
       if (event.key === 'Escape') {
@@ -168,10 +240,10 @@ const BacklogPanel = () => {
       }
     } else if (selectedBacklogId && !editingBacklogId && !activeElementIsInput) {
       if (event.key.toLowerCase() === 'd') {
-        if (event.repeat) return;
+        if ((event as any).repeat) return;
         const pressedOnce = backlogListRef.current?.dataset.pressedD;
         if (pressedOnce) {
-          delete backlogListRef.current.dataset.pressedD;
+          delete backlogListRef.current!.dataset.pressedD;
           handleDeleteSelectedWithConfirmation();
         } else {
           if (backlogListRef.current) {
@@ -180,7 +252,7 @@ const BacklogPanel = () => {
               if (backlogListRef.current?.dataset.pressedD) {
                 delete backlogListRef.current.dataset.pressedD;
               }
-            }, 300); // 300ms window for the second 'd'
+            }, 300);
           }
         }
       }
@@ -190,12 +262,12 @@ const BacklogPanel = () => {
   useEffect(() => {
     const listEl = backlogListRef.current;
     if (listEl) {
-      listEl.addEventListener('keydown', handleKeyDown);
-      return () => listEl.removeEventListener('keydown', handleKeyDown);
+      listEl.addEventListener('keydown', handleKeyDown as EventListener);
+      return () => listEl.removeEventListener('keydown', handleKeyDown as EventListener);
     }
   }, [handleKeyDown]);
 
-  const getBacklogItemClasses = (backlog) => {
+  const getBacklogItemClasses = (backlog: Backlog) => {
     let classes = "p-3 border-b border-neutral-content/10 dark:border-neutral-content/20 cursor-pointer group transition-colors duration-150 ease-in-out relative";
 
     if (backlog.Id === editingBacklogId) {
@@ -204,6 +276,10 @@ const BacklogPanel = () => {
       classes += " bg-amber-100 dark:bg-amber-700/50 text-amber-800 dark:text-amber-100";
     } else {
       classes += " bg-base-100 dark:bg-neutral-800 hover:bg-base-200/70 dark:hover:bg-neutral-700/50";
+    }
+    if (backlog.Id !== selectedBacklogId && backlog.Id !== editingBacklogId) {
+        if (backlog.Done) classes += " opacity-70";
+        if (backlog.Expired) classes += " opacity-60";
     }
     return classes;
   };
@@ -248,8 +324,8 @@ const BacklogPanel = () => {
                   placeholder="Backlog content..."
                   rows={3}
                   onKeyDown={(e) => {
-                    if (e.key === 'Escape') { handleCancelEdit(backlog.Id); }
-                    else if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveEdit(backlog.Id); }
+                    if (e.key === 'Escape') { e.stopPropagation(); handleCancelEdit(backlog.Id); }
+                    else if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); e.stopPropagation(); handleSaveEdit(backlog.Id); }
                   }}
                 />
                 <input
@@ -258,6 +334,7 @@ const BacklogPanel = () => {
                   value={editingContent.Reference}
                   onChange={e => setEditingContent(c => ({ ...c, Reference: e.target.value }))}
                   placeholder="Reference (e.g. ticket ID)"
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveEdit(backlog.Id); } }}
                 />
                 <input
                   type="text"
@@ -265,39 +342,42 @@ const BacklogPanel = () => {
                   value={editingContent.Sponsor}
                   onChange={e => setEditingContent(c => ({ ...c, Sponsor: e.target.value }))}
                   placeholder="Sponsor"
+                  onKeyDown={(e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSaveEdit(backlog.Id); } }}
                 />
                 <div className="flex gap-2 mt-1">
-                  <button onClick={(e) => { e.stopPropagation(); handleSaveEdit(backlog.Id) }} className="btn btn-xs btn-success">Save</button>
-                  <button onClick={(e) => { e.stopPropagation(); handleCancelEdit(backlog.Id) }} className="btn btn-xs btn-ghost">Cancel</button>
+                  <button onClick={(e) => { e.stopPropagation(); handleSaveEdit(backlog.Id); }} className="btn btn-xs btn-success">Save</button>
+                  <button onClick={(e) => { e.stopPropagation(); handleCancelEdit(backlog.Id); }} className="btn btn-xs btn-ghost">Cancel</button>
                 </div>
               </div>
             ) : (
               <div className="flex flex-col">
                 <p className={`font-medium text-sm mb-1 break-words
-                      ${backlog.Done ? 'text-green-700 dark:text-green-400/80 opacity-80' : ''}
-                      ${backlog.Expired ? 'text-red-700 dark:text-red-500/80 line-through opacity-70' : ''}
-                      ${selectedBacklogId === backlog.Id && !backlog.Done && !backlog.Expired ? 'text-amber-800 dark:text-amber-100' :
-                    (!backlog.Done && !backlog.Expired ? 'text-base-content dark:text-neutral-content' : '')}
+                    ${backlog.Done && !(selectedBacklogId === backlog.Id || editingBacklogId === backlog.Id) ? 'text-green-700 dark:text-green-400/80 opacity-80' : ''}
+                    ${backlog.Expired && !(selectedBacklogId === backlog.Id || editingBacklogId === backlog.Id) ? 'text-red-700 dark:text-red-500/80 line-through opacity-70' : ''}
+                    ${selectedBacklogId === backlog.Id && !backlog.Done && !backlog.Expired ? 'text-amber-800 dark:text-amber-100' :
+                      (selectedBacklogId !== backlog.Id && !backlog.Done && !backlog.Expired ? 'text-base-content dark:text-neutral-content' : '')}
+                    ${selectedBacklogId === backlog.Id && backlog.Done ? 'text-green-800 dark:text-green-300' : ''}
+                    ${selectedBacklogId === backlog.Id && backlog.Expired ? 'text-red-800 dark:text-red-300 line-through' : ''}
                   `}>
                   {backlog.Info || <span className="italic text-neutral-400 dark:text-neutral-500">Untitled Backlog</span>}
                 </p>
                 {(backlog.Reference || backlog.Sponsor) &&
-                  <p className={`text-xs opacity-70 mt-0.5
-                        ${selectedBacklogId === backlog.Id ? 'text-amber-700 dark:text-amber-200' : 'text-neutral-content/70 dark:text-neutral-content/70'}
-                        ${backlog.Done ? 'text-green-600/70 dark:text-green-400/60' : ''}
-                        ${backlog.Expired ? 'text-red-600/70 dark:text-red-500/60' : ''}
+                  <p className={`text-xs mt-0.5
+                        ${selectedBacklogId === backlog.Id ? 'opacity-90 text-amber-700 dark:text-amber-200' : 'opacity-70 text-neutral-content/70 dark:text-neutral-content/70'}
+                        ${backlog.Done && !(selectedBacklogId === backlog.Id) ? 'text-green-600/70 dark:text-green-400/60' : ''}
+                        ${backlog.Expired && !(selectedBacklogId === backlog.Id) ? 'text-red-600/70 dark:text-red-500/60 line-through' : ''}
                     `}>
                     {backlog.Reference && <span>Ref: {backlog.Reference}</span>}
                     {backlog.Reference && backlog.Sponsor && " | "}
                     {backlog.Sponsor && <span>Sponsor: {backlog.Sponsor}</span>}
                   </p>
                 }
-                <p className={`text-xs opacity-50 mt-0.5
-                      ${selectedBacklogId === backlog.Id ? 'text-amber-600 dark:text-amber-300' : 'text-neutral-content/50 dark:text-neutral-content/50'}
-                      ${backlog.Done ? 'text-green-500/50 dark:text-green-400/40' : ''}
-                      ${backlog.Expired ? 'text-red-500/50 dark:text-red-500/40' : ''}
+                <p className={`text-xs mt-0.5
+                    ${selectedBacklogId === backlog.Id ? 'opacity-70 text-amber-600 dark:text-amber-300' : 'opacity-50 text-neutral-content/50 dark:text-neutral-content/50'}
+                    ${backlog.Done && !(selectedBacklogId === backlog.Id) ? 'text-green-500/50 dark:text-green-400/40' : ''}
+                    ${backlog.Expired && !(selectedBacklogId === backlog.Id) ? 'text-red-500/50 dark:text-red-500/40' : ''}
                   `}>
-                  Edited: {new Date(backlog.EditAt).toLocaleString()}
+                  Edited: {backlog.EditAt.toLocaleString()}
                 </p>
                 <div className="flex gap-2 mt-2 items-center">
                   <button
@@ -316,7 +396,7 @@ const BacklogPanel = () => {
                     onClick={(e) => { e.stopPropagation(); toggleBacklogProperty(backlog.Id, 'Expired'); }}
                     className={`btn btn-xs btn-ghost btn-circle ${backlog.Expired ? 'text-error' : 'text-neutral-content/50 hover:text-error'}`}
                   >
-                    {backlog.Expired ? <IconCheckCircle size={18} className="text-error" /> : <IconCircle size={18} className="text-neutral-content/50 hover:text-error" />}
+                    {backlog.Expired ? <IconCheckCircle size={18} /> : <IconCircle size={18} />}
                   </button>
                   <span className={`text-xs ${backlog.Expired ? 'text-error font-semibold' : 'text-neutral-content/60'}`}>
                     Expired
