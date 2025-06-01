@@ -2,23 +2,43 @@
 // components/BacklogPanel.jsx
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
-  fetchBacklogsAPI, createBacklogAPI, updateBacklogAPI, deleteBacklogAPI,
-  loadStateFromSessionStorage, saveStateToSessionStorage, // Backlog is removed as it's defined locally now
-} from './BacklogDataOpt'; // Updated import path
-import {
   IconPlus,
   IconInfo,
   IconCheckCircle, IconCircle
 } from './icons'; // Adjust path as needed
-import {listKey, OptDefaults} from 'doptime-client';
+import Opt, {listKey, OptDefaults} from 'doptime-client';
+
+// Local utility functions for session storage (can be moved to a separate generic utility file if needed)
+const loadStateFromSessionStorage = <T,>(key: string, defaultValue: T): T => {
+  try {
+    const serializedState = sessionStorage.getItem(key);
+    if (serializedState === null) {
+      return defaultValue;
+    }
+    return JSON.parse(serializedState) as T;
+  } catch (error) {
+    console.error("Error loading state from session storage:", error);
+    return defaultValue;
+  }
+};
+
+const saveStateToSessionStorage = <T,>(key: string, state: T) => {
+  try {
+    const serializedState = JSON.stringify(state);
+    sessionStorage.setItem(key, serializedState);
+  } catch (error) {
+    console.error("Error saving state to session storage:", error);
+  }
+};
+
 
 export interface Backlog { // Local definition, adjusted types
   Id: string;
   Info: string;
   Reference: string;
   Sponsor: string;
-  CreateAt: Date; // Changed to Date
-  EditAt: Date;   // Changed to Date
+  CreatedAt: Date; // Changed to Date
+  UpdatedAt: Date;   // Changed to Date
   Expired: boolean;
   Done: boolean;
 }
@@ -40,12 +60,23 @@ const BacklogPanel = () => {
     OptDefaults({urlBase: "http://127.0.0.1:81" });
 
     keyAntiAgingBacklog.lRange(0, -1).then((data) => {
+      if (!Array.isArray(data)) {
+        console.error("Data from Redis is not an array:", data);
+        return;
+      }
+      console.log("Loaded backlogs from keyAntiAgingBacklog:", data);
       // Ensure data is an array and items conform to Backlog interface
       // Dates now *must* be parsed if they are strings from Redis:
-      const parsedData = (data || []).map(item => ({
+      const parsedData = (data).map(item => ({
         ...item,
+        // Convert string dates to Date objects if necessary
+        CreatedAt: typeof item.CreatedAt === 'string' ? new Date(item.CreatedAt) : new Date(item.CreatedAt), // Ensure it's a Date
+        UpdatedAt: typeof item.UpdatedAt === 'string' ? new Date(item.UpdatedAt) : new Date(item.UpdatedAt),   // Ensure it's a Date
       }));
-      setBacklogs(parsedData.sort((a, b) => b.EditAt.getTime() - a.EditAt.getTime())); // Compare Date objects directly
+      setBacklogs(parsedData.sort((a, b) => b.UpdatedAt.getTime() - a.UpdatedAt.getTime())); // Compare Date objects directly
+    }).catch(error => {
+      console.error("Failed to load backlogs from keyAntiAgingBacklog:", error);
+      setBacklogs([]); // Initialize with empty array on error
     });
 
     setSelectedBacklogId(loadStateFromSessionStorage('selectedBacklogId', null));
@@ -59,7 +90,7 @@ const BacklogPanel = () => {
 
   const sortedAndFilteredBacklogs = backlogs
     .filter(b => (showExpired || !b.Expired) && (showDone || !b.Done))
-    .sort((a, b) => b.EditAt.getTime() - a.EditAt.getTime()); // Compare Date objects directly
+    .sort((a, b) => b.UpdatedAt.getTime() - a.UpdatedAt.getTime()); // Compare Date objects directly
 
   const handleCreateNew = () => {
     const newTempId = `new-${Date.now()}`;
@@ -67,7 +98,7 @@ const BacklogPanel = () => {
     setEditingBacklogId(newTempId);
     setSelectedBacklogId(null);
     // Add a complete backlog item structure locally
-    setBacklogs(prev => [{ Id: newTempId, Info: '', Reference: '', Sponsor: '', Expired: false, Done: false }, ...prev]);
+    setBacklogs(prev => [{ Id: newTempId, Info: '', Reference: '', Sponsor: '', Expired: false, Done: false, CreatedAt: new Date(), UpdatedAt: new Date() }, ...prev]);
     setTimeout(() => editInputRef.current?.focus(), 0);
   };
 
@@ -82,29 +113,23 @@ const BacklogPanel = () => {
     try {
       let finalBacklog: Backlog;
       const editTime = new Date(); // Use Date object
-      const commonPayload = { ...editingContent, EditAt: editTime };
 
       if (id.startsWith('new-')) {
-        const newBacklogData: Omit<Backlog, 'Id'> = { // Data for API shouldn't include temp Id
-            Info: commonPayload.Info,
-            Reference: commonPayload.Reference,
-            Sponsor: commonPayload.Sponsor,
-            CreateAt:  new Date(),
-            EditAt:  new Date(),
+        const newBacklogData: Backlog = {
+            Id: `blg-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`, // Generate a more robust unique ID
+            Info: editingContent.Info,
+            Reference: editingContent.Reference,
+            Sponsor: editingContent.Sponsor,
+            CreatedAt:  editTime,
+            UpdatedAt:  editTime,
             Expired: false,
             Done: false
         };
 
-        const createdApiBacklog = await createBacklogAPI(newBacklogData);
-        // Ensure createdApiBacklog also has Date objects for CreateAt and EditAt
-        finalBacklog = {
-            ...createdApiBacklog,
-        };
+        await keyAntiAgingBacklog.lPush(newBacklogData);
+        finalBacklog = newBacklogData;
 
-        console.log("Created backlog:", finalBacklog);
-        await keyAntiAgingBacklog.lPush(finalBacklog);
-
-        setBacklogs(prev => [finalBacklog, ...prev.filter(b => b.Id !== id)].sort((a, b) => b.EditAt.getTime() - a.EditAt.getTime()));
+        setBacklogs(prev => [finalBacklog, ...prev.filter(b => b.Id !== id)].sort((a, b) => b.UpdatedAt.getTime() - a.UpdatedAt.getTime()));
         setSelectedBacklogId(finalBacklog.Id);
 
       } else { // Existing item
@@ -114,23 +139,40 @@ const BacklogPanel = () => {
             setEditingBacklogId(null);
             return;
         }
+
         const updatedBacklogObject: Backlog = {
             ...originalBacklog,
-            ...commonPayload, // Info, Reference, Sponsor, EditAt
-            Id: id
+            Info: editingContent.Info,
+            Reference: editingContent.Reference,
+            Sponsor: editingContent.Sponsor,
+            UpdatedAt: editTime, // Ensure UpdatedAt is always a new Date object
         };
+        //if updatedBacklogObject.CreatedAt is a string, convert it to Date
+        // This check is good, but ideally, all dates loaded from Redis should already be Date objects.
+        if (typeof updatedBacklogObject.CreatedAt === 'string') {
+            updatedBacklogObject.CreatedAt = new Date(updatedBacklogObject.CreatedAt);
+        }
+        // No need to delete UpdatedAt if we are always setting it to a new Date object above.
+        // delete updatedBacklogObject.UpdatedAt;
 
+        // Find the actual index of the backlog item in the current 'backlogs' state
         const itemIndex = backlogs.findIndex(b => b.Id === id);
         if (itemIndex !== -1) {
-            await keyAntiAgingBacklog.lSet(itemIndex, updatedBacklogObject);
+            // Redis `lSet` operates by index
+            // However, `doptime-client`'s `lSet` works differently. It expects a value and index to update.
+            // A direct Redis LSET equivalent for *updating* a specific item based on ID might be complex if the list
+            // is not truly a 1:1 reflection or if items can move.
+            // For now, assuming `lSet` can update the item at its current index in the *local* list.
+            // If the item moves or the Redis list changes, this approach might need adjustment.
+            await keyAntiAgingBacklog.lSet(itemIndex, updatedBacklogObject); // This assumes the index is stable in Redis
             finalBacklog = updatedBacklogObject;
         } else {
-             console.error("Error updating: Backlog item not found in local state for index for ID:", id);
+             console.error("Error updating: Backlog item not found in local state for ID:", id);
              setEditingBacklogId(null);
              return;
         }
-        
-        setBacklogs(prev => prev.map(b => b.Id === id ? finalBacklog : b).sort((a, b) => b.EditAt.getTime() - a.EditAt.getTime()));
+
+        setBacklogs(prev => prev.map(b => b.Id === id ? finalBacklog : b).sort((a, b) => b.UpdatedAt.getTime() - a.UpdatedAt.getTime()));
         setSelectedBacklogId(finalBacklog.Id);
       }
     } catch (error) {
@@ -185,9 +227,7 @@ const BacklogPanel = () => {
             console.error("Item to delete not found in local state.");
             return;
         }
-
-        await deleteBacklogAPI(selectedBacklogId);
-
+        // Remove 1 occurrence of the itemToDelete from the list
         const removedCount = await keyAntiAgingBacklog.lRem(1, itemToDelete);
         if (removedCount === 0) {
             console.warn("Item not found in keyAntiAgingBacklog for lRem, or value didn't match:", itemToDelete);
@@ -212,7 +252,7 @@ const BacklogPanel = () => {
     const updatedBacklog: Backlog = {
       ...originalBacklog,
       [property]: !originalBacklog[property],
-      EditAt: new Date() // Use Date object directly
+      UpdatedAt: new Date() // Use Date object directly
     };
 
     try {
@@ -220,7 +260,7 @@ const BacklogPanel = () => {
       setBacklogs(prev => {
         const newBacklogs = [...prev];
         newBacklogs[backlogIndex] = updatedBacklog;
-        return newBacklogs.sort((a, b) => b.EditAt.getTime() - a.EditAt.getTime());
+        return newBacklogs.sort((a, b) => b.UpdatedAt.getTime() - a.UpdatedAt.getTime());
       });
 
     } catch (error) {
@@ -377,7 +417,7 @@ const BacklogPanel = () => {
                     ${backlog.Done && !(selectedBacklogId === backlog.Id) ? 'text-green-500/50 dark:text-green-400/40' : ''}
                     ${backlog.Expired && !(selectedBacklogId === backlog.Id) ? 'text-red-500/50 dark:text-red-500/40' : ''}
                   `}>
-                  Edited: {backlog.EditAt.toLocaleString()}
+                  Edited: {backlog.UpdatedAt.toLocaleString()}
                 </p>
                 <div className="flex gap-2 mt-2 items-center">
                   <button
