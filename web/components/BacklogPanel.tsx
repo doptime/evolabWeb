@@ -43,7 +43,8 @@ export interface Backlog { // Local definition, adjusted types
   Done: boolean;
 }
 
-export const keyAntiAgingBacklog = new listKey<Backlog>("AntiAgingBacklog");
+export const keyAntiAgingBacklog = new listKey<Backlog>("Backlog:直观感受1-20数字的大小");
+
 
 
 const BacklogPanel = () => {
@@ -60,8 +61,12 @@ const BacklogPanel = () => {
     OptDefaults({urlBase: "http://127.0.0.1:81" });
 
     keyAntiAgingBacklog.lRange(0, -1).then((data) => {
+      if (!data) {
+        console.log("No data found in keyAntiAgingBacklog");
+        return;
+      }
       if (!Array.isArray(data)) {
-        console.error("Data from Redis is not an array:", data);
+        console.log("Data from Redis is not an array:", data);
         return;
       }
       console.log("Loaded backlogs from keyAntiAgingBacklog:", data);

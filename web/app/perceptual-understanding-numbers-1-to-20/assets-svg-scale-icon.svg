@@ -1,0 +1,9 @@
+<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 200 200'>
+  <!-- Base structure -->
+  <g id='physics-scale'>
+    <rect x='50' y='50' width='100' height='20' rx='10' fill='#222' />
+    <circle cx='100' cy='40' r='10' fill='#444' />
+  </g>
+  <!-- Animation effects -->
+  <style>@import '../styles-index.css';</style>
+</svg>

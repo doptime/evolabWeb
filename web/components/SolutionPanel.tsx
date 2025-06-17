@@ -15,7 +15,7 @@ export interface SolutionGraphNode {
   UpdatedAt: Date;
 }
 
-const keyAntiAgingNodes = new hashKey<SolutionGraphNode>("AntiAgingNodes");
+const keyAntiAgingNodes = new hashKey<SolutionGraphNode>("SolutionFileNode:直观感受1-20数字的大小");
 
 export default function SolutionPanel() {
   const [solutionNodes, setSolutionNodes] = useState<SolutionGraphNode[]>([]);
@@ -38,12 +38,12 @@ export default function SolutionPanel() {
     setIsLoading(true);
     try {
       const nodes = await keyAntiAgingNodes.hVals();
-      setSolutionNodes(nodes);
+      setSolutionNodes(nodes??[]);
     } finally {
       setIsLoading(false);
     }
   }, []);
-  
+
 
   useEffect(() => {
     fetchNodes();
@@ -57,7 +57,8 @@ export default function SolutionPanel() {
     if (filterText) {
       result = result.filter(node =>
         node.Pathname.toLowerCase().includes(filterText.toLowerCase()) ||
-        node.BulletDescription.toLowerCase().includes(filterText.toLowerCase())
+        node.BulletDescription.toLowerCase().includes(filterText.toLowerCase()) ||
+        node.Content.toLowerCase().includes(filterText.toLowerCase())
       );
     }
 

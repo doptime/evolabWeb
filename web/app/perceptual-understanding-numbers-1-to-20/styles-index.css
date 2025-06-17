@@ -1,0 +1,22 @@
+.gesture-feedback {
+  animation: pulse 0.5s ease;
+}
+
+@keyframes pulse {
+  0% { box-shadow: 0 0 0 rgba(0,0,0,0.2); }
+  70% { box-shadow: 0 0 10px rgba(0,255,136,0.8); }
+  100% { box-shadow: 0 0 0 rgba(0,255,136,0); }
+}
+
+.gesture-active {
+  box-shadow: 0 0 15px var(--energy-ball-collision-glow);
+  transform: scale(1.05);
+}
+
+[data-game-state="adjusting"] .gesture-feedback {
+  animation-delay: calc(var(--animation-delay-base) * 0.5s);
+}
+
+[data-game-state="judging"] .gesture-feedback {
+  animation-delay: calc(var(--animation-delay-base) * 1.5s);
+}
