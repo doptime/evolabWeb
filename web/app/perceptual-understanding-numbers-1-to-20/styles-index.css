@@ -20,3 +20,20 @@
 [data-game-state="judging"] .gesture-feedback {
   animation-delay: calc(var(--animation-delay-base) * 1.5s);
 }
+
+:root {
+  --success-color: #4CAF50; /* Green */
+  --error-color: #F44336;   /* Red */
+  --energy-ball-collision-glow: #00ffff; /* Cyan */
+}
+
+.glow-text {
+  text-shadow: 0 0 8px rgba(255, 255, 255, 0.7);
+}
+
+.glass-morphic {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}

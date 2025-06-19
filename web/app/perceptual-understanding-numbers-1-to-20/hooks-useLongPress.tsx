@@ -1,5 +1,6 @@
-import { useGestureStore } from '../store-gestureStore';
-import { useGameStore } from './store-gameStore';
+'use client';
+import {useGestureStore } from "../../components/guesture/gestureStore"
+import useGameStore from './store-gameStore';
 export const useLongPress = (callback) => {
   const { gesture } = useGestureStore();
   const { increase, decrease } = useGameStore();

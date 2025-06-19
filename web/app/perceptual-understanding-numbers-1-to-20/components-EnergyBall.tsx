@@ -1,7 +1,7 @@
 "use client";
 import { motion, useMotionValue, useTransform, willChange } from 'framer-motion';
-import { useGestureStore } from '../store-gestureStore';
-import { useGameStore } from './store-gameStore';
+import { useGestureStore } from "../../components/guesture/gestureStore"
+import useGameStore from './store-gameStore';
 import { playEnergyBallSound } from '../utils-audio';
 import { useFrame } from '@react-three/fiber';
 import { Physics, useSphere } from '@react-three/cannon';
@@ -9,7 +9,8 @@ import { useEffect, useRef, useMemo } from 'react';
 
 const EnergyBall = ({ id, initialPosition }) => {
   const { gameState, currentValue } = useGameStore();
-  const { isDragging, velocity, position } = useGestureStore();
+  // Removed unused isDragging, velocity, position from useGestureStore
+  const { gesture } = useGestureStore();
   const [ref, api] = useSphere(() => ({
     mass: 1,
     position: initialPosition,
@@ -34,7 +35,7 @@ const EnergyBall = ({ id, initialPosition }) => {
   // 物理引擎与Framer Motion同步
   useFrame(() => {
     if (ref.current) {
-      const pos = ref.current.position();
+      const pos = ref.current.position.toArray(); // Use toArray() to get position
       x.set(pos[0]);
       y.set(pos[1]);
     }
@@ -43,23 +44,34 @@ const EnergyBall = ({ id, initialPosition }) => {
   // 拖拽轨迹预览线
   const trailPoints = useRef([]);
   useEffect(() => {
-    if (isDragging) {
+    if (gesture.type === 'drag' || gesture.type === 'dragstart') {
       trailPoints.current.push([x.get(), y.get()]);
       if (trailPoints.current.length > 10) trailPoints.current.shift();
+    } else if (gesture.type === 'dragend') {
+      trailPoints.current = []; // Clear trail on drag end
     }
-  }, [isDragging, x, y]);
+  }, [gesture, x, y]);
 
-  // 碰撞事件处理
+  // Collision event handling
   useEffect(() => {
-    const handleCollision = (event) => {
-      playEnergyBallSound('collision', { 
-        velocity: Math.hypot(...event.contact!.velocity),
+    const handleCollision = (e) => {
+      // Assuming playEnergyBallSound is imported correctly and handles 'collision' type
+      playEnergyBallSound('collision', {
+        velocity: Math.hypot(...e.contact.velocity),
         position: [x.get(), y.get()]
       });
     };
 
-    ref.addEventListener('collision', handleCollision);
-    return () => ref.removeEventListener('collision', handleCollision);
+    const currentRef = ref.current;
+    if (currentRef) {
+      currentRef.addEventListener('collide', handleCollision);
+    }
+
+    return () => {
+      if (currentRef) {
+        currentRef.removeEventListener('collide', handleCollision);
+      }
+    };
   }, [ref, x, y]);
 
   return (
@@ -71,7 +83,7 @@ const EnergyBall = ({ id, initialPosition }) => {
         style={{ willChange: willChange(['position', 'scale']) }}
       >
         <sphereGeometry args={[0.5, 32, 32]} />
-        <meshStandardMaterial 
+        <meshStandardMaterial
           color={color}
           emissive={useTransform(gameState, {
             idle: '#222',
@@ -87,7 +99,7 @@ const EnergyBall = ({ id, initialPosition }) => {
       {trailPoints.current.length > 1 && (
         <motion.path
           d={trailPoints.current
-            .map(([x, y], i) => i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`)
+            .map(([px, py], i) => i === 0 ? `M ${px} ${py}` : `L ${px} ${py}`)
             .join(' ')}
           stroke="rgba(255,255,255,0.5)"
           strokeWidth="2"

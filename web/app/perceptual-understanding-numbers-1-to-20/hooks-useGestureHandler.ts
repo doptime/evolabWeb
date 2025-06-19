@@ -1,118 +1,72 @@
-import { useGestureStore } from '../store-gestureStore';
-import { useGameStore } from './store-gameStore';
-import { useFrame } from 'react-three-fiber';
-import { useSpring, AnimatePresence } from 'framer-motion';
-import { playAudio } from '../utils-audio';
+"use client";
+import React, { useEffect } from 'react';
+import { useGestureStore } from "../../components/guesture/gestureStore";
+import useGameStore from './store-gameStore';
+
+// Define GestureType and ClickPayload for better type safety
+interface GestureType {
+  type: 'idle' | 'point' | 'click' | 'dragstart' | 'drag' | 'dragend' | 'contextmenu' | 'swipe' | 'cancel' | 'transformstart' | 'transform' | 'transformend';
+  payload: any;
+  timestamp: number;
+  sequenceId: string;
+}
+
+interface ClickPayload {
+  targetId?: string;
+}
 
 export function useGestureHandler() {
-  const { gesture, recordGesture, replayGestures, clearGestureHistory } = useGestureStore();
+  const { gesture } = useGestureStore();
   const { 
-    challengeValue, 
-    currentValue, 
-    gameState, 
-    increase, 
-    decrease, 
+    applyModifier, 
     triggerJudgment, 
     undoLastAction, 
     redoLastAction 
   } = useGameStore();
 
-  // Spring animations for physics-based interactions
-  const tiltSpring = useSpring({ 
-    rotateX: 0, 
-    stiffness: 300, 
-    damping: 20 
-  });
-
-  // Gesture event processor with performance optimization
-  useFrame(() => {
-    if (gesture.type) {
+  // Gesture event processor
+  React.useEffect(() => {
+    if (gesture.type && gesture.type !== 'idle') {
       handleGestureEvent(gesture);
-      recordGesture(gesture); // Record for debugging
-      requestAnimationFrame(() => {
-        playAudio('feedback', { 
-          timestamp: performance.now(), 
-          gestureType: gesture.type 
-        });
-      });
     }
-  });
+  }, [gesture]); // Dependency on gesture ensures this effect runs when gesture changes
 
   function handleGestureEvent(gesture: GestureType) {
     switch(gesture.type) {
       case 'click':
         handleButtonClick(gesture.payload);
         break;
-      case 'drag':
-        handleDragOperation(gesture.payload);
+      // Add other gesture types as needed
+      default:
+        // console.log(`Unhandled gesture type: ${gesture.type}`);
         break;
-      case 'transform':
-        handleScaleTransform(gesture.payload);
-        break;
-      case 'replay':
-        replayGestures();
-        break;
-      case 'undo':
-        undoLastAction();
-        break;
-      case 'redo':
-        redoLastAction();
-        break;
-      // ... other cases
     }
   }
 
   function handleButtonClick(payload: ClickPayload) {
-    switch(payload.targetId) {
-      case 'modifier-+1':
-        increase(1);
-        playAudio('ding');
-        break;
-      case 'modifier--1':
-        decrease(1);
-        playAudio('swoosh');
-        break;
-      case 'judgment-btn':
-        triggerJudgment();
-        playAudio('judgment');
-        break;
-      // ... other cases
+    if (!payload.targetId) return;
+
+    // Modifier buttons have format 'modifier-<operation>-<value>' e.g., 'modifier-add-1'
+    if (payload.targetId.startsWith('modifier-')) {
+      const parts = payload.targetId.split('-');
+      if (parts.length === 3) {
+        const operation = parts[1] as 'add' | 'subtract';
+        const value = parseInt(parts[2]);
+        if (!isNaN(value)) {
+          applyModifier(value, operation);
+          // Audio feedback for modifier click will be handled in ModifierButton component for better context
+        }
+      }
+    } else if (payload.targetId === 'judgment-btn') {
+      triggerJudgment();
+      // Audio feedback for judgment click will be handled in JudgmentButton component
     }
+    // Add other button click handlers here if necessary
   }
 
-  function handleDragOperation(payload: DragPayload) {
-    // Add physics-based boundary validation
-    const bounds = getEnergyBallBounds();
-    if (isOutOfBounds(payload.position, bounds)) {
-      applyBoundaryRebound(payload.position, bounds);
-      playAudio('collision', { 
-        velocity: payload.velocity, 
-        position: payload.position 
-      });
-    }
-    // Multi-touch conflict resolution
-    resolveMultiTouchConflicts(payload);
-  }
-
-  // Add physics-based animations and gesture-to-state mapping
-  // Add collision detection optimization
-  // Add multi-touch gesture handling
+  // Add other gesture handling functions as needed (e.g., for drag, transform)
 
   return {
-    tiltSpring,
-    handleGestureEvent,
-    replayGestures,
-    clearGestureHistory
+    // Expose any necessary functions or states if needed by parent components
   };
 }
-
-// Add gesture-to-state mapping table
-const gestureStateMap = {
-  'click': 'adjusting',
-  'drag': 'adjusting',
-  'transform': 'scaling',
-  'replay': 'replaying',
-  'undo': 'undoing',
-  'redo': 'redoning',
-  // ... other mappings
-};

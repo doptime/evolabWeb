@@ -1,72 +1,63 @@
+"use client";
 import { motion } from 'framer-motion';
-import { useGameStore } from './store-gameStore';
-import { useGestureStore } from '../store-gestureStore';
-import { playClickSound, triggerHapticFeedback } from '../utils-audio';
+import useGameStore from './store-gameStore';
+import { useGestureStore } from "../../components/guesture/gestureStore";
+import { playClickSound, initAudio } from './utils-audio'; // Import initAudio here
 
 const StartChallengeButton = () => {
   const { gameState, startChallenge } = useGameStore();
-  const { gesture } = useGestureStore();
+  const { gesture, setGesture } = useGestureStore(); // Import setGesture to clear gesture after click
 
+  // Determine if the button should be interactive based on game state
   const isInteractionEnabled = gameState === 'idle';
-  const buttonColor = {
-    'idle': 'bg-gradient-to-r from-blue-500 to-purple-500',
-    'correct': 'bg-gradient-to-r from-green-500 to-teal-500',
-    'incorrect': 'bg-gradient-to-r from-red-500 to-orange-500'
-  }[gameState];
 
-  const handleClick = () => {
+  // Dynamic button styling based on game state
+  const buttonStyle = {
+    idle: 'bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg hover:shadow-xl',
+    correct: 'bg-gradient-to-r from-green-500 to-teal-500 shadow-lg hover:shadow-xl',
+    incorrect: 'bg-gradient-to-r from-red-500 to-orange-500 shadow-lg hover:shadow-xl',
+    default: 'bg-gray-600 shadow-md hover:shadow-lg'
+  };
+
+  const handleClick = async () => { // Make handleClick async to await initAudio
     if (isInteractionEnabled) {
-      startChallenge();
+      await initAudio(); // Ensure audio is initialized before starting the challenge
+      startChallenge(); // Call the startChallenge action from the store
       playClickSound();
-      triggerHapticFeedback();
+      // triggerHapticFeedback(); // This might not be needed on the start button
+      // Clear the gesture state after a successful click to prevent re-triggering
+      setGesture({ type: 'idle', payload: {}, timestamp: Date.now(), sequenceId: '' });
     }
   };
 
-  const handleGestureCancel = () => {
-    // Add physical rebound animation on gesture cancel
-    if (gesture.type === 'drag') {
-      // Implement spring-based rebound animation
-    }
-  };
+  // Check if the button is being targeted by a gesture for visual feedback
+  const isGestureTargeted = gesture.type === 'click' && gesture.payload.targetId === 'start-challenge-btn';
 
   return (
     <motion.button
+      id="start-challenge-btn"
       onClick={handleClick}
-      onPointerUp={handleGestureCancel}
-      whileTap={{ 
-        scale: 0.95, 
-        transition: { delay: 0.1, type: 'spring', stiffness: 400, damping: 15 } 
+      whileTap={{
+        scale: 0.95,
+        transition: { delay: 0.1, type: 'spring', stiffness: 400, damping: 15 }
       }}
       className={`
-        ${buttonColor} 
+        ${isInteractionEnabled ? buttonStyle[gameState] : buttonStyle.default}
         glass-morphic 
         px-8 py-4 rounded-2xl 
         text-white font-bold 
-        shadow-lg 
         transition-all duration-300 
         ${isInteractionEnabled ? 'cursor-pointer' : 'cursor-not-allowed opacity-70'}
         will-change-transform
+        ${isGestureTargeted ? 'ring-2 ring-yellow-400' : ''} 
+        w-64 h-16 text-xl
       `}
       aria-label="Start Challenge"
       aria-disabled={!isInteractionEnabled}
+      // Conditionally render the button based on game state
+      hidden={gameState !== 'idle'}
     >
-      {gameState === 'idle' ? 'Start Challenge' : 'Next Challenge'}
-      <motion.span
-        className="absolute -inset-1 border-2 border-white/20 rounded-2xl"
-        animate={{
-          opacity: gesture.type === 'point' ? 1 : 0,
-          scale: gesture.type === 'point' ? 1.05 : 1
-        }}
-        transition={{ type: 'spring', stiffness: 300 }}
-      />
-      {/* Multi-touch synchronization indicator */}
-      {gesture.type === 'transform' && (
-        <motion.div
-          className="absolute inset-0 bg-white/10 rounded-2xl"
-          animate={{ rotate: 360 }}
-          transition={{ duration: 1, ease: 'linear' }}
-        />
-      )}
+      {gameState === 'idle' ? 'Start Challenge' : 'Next Challenge'} {/* Text changes based on state */}
     </motion.button>
   );
 };

@@ -23,17 +23,19 @@
     r='30' 
     fill='url(#energy-glow)' 
     filter='url(#glow)' 
-    class='transition-colors duration-300 will-change-transform' 
-    :class='{
-      "bg-green-500": gameStore.gameState === "correct",
-      "bg-red-500": gameStore.gameState === "incorrect",
-      "glow-strong": gameStore.velocity > 5,
-      "glow-weak": gameStore.velocity <= 5
-    }'
-    :style='{
-      "filter": gameStore.collisionDetected ? "brightness(1.5) contrast(1.2)" : "",
-      "animation": gameStore.isDragging ? "pulse 0.5s infinite" : ""
-    }'
+    class='transition-colors duration-300 will-change-transform'
+    // Removed incorrect :class binding, will use direct style/className manipulation if needed
+    // :class='{
+    //   "bg-green-500": gameStore.gameState === "correct",
+    //   "bg-red-500": gameStore.gameState === "incorrect",
+    //   "glow-strong": gameStore.velocity > 5,
+    //   "glow-weak": gameStore.velocity <= 5
+    // }'
+    // Removed incorrect :style binding
+    // :style='{
+    //   "filter": gameStore.collisionDetected ? "brightness(1.5) contrast(1.2)" : "",
+    //   "animation": gameStore.isDragging ? "pulse 0.5s infinite" : ""
+    // }'
   />
   <circle 
     cx='50' 
@@ -50,10 +52,11 @@
     r='5' 
     fill='url(#energy-glow)' 
     class='state-indicator'
-    :class='{
-      "bg-blue-500": gameStore.currentState === "idle",
-      "bg-yellow-500": gameStore.currentState === "moving",
-      "bg-purple-500": gameStore.currentState === "collided"
-    }'
+    // Removed incorrect :class binding
+    // :class='{
+    //   "bg-blue-500": gameStore.currentState === "idle",
+    //   "bg-yellow-500": gameStore.currentState === "moving",
+    //   "bg-purple-500": gameStore.currentState === "collided"
+    // }'
   />
 </svg>
