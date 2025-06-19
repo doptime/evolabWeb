@@ -13,7 +13,6 @@ interface GameStateStore {
   sequenceId: string;     // Unique identifier for a game sequence
   history: { type: 'add' | 'subtract', value: number }[]; // History for undo/redo
   historyIndex: number;   // Current index in the history
-  counterZIndex: number; // Added from NumberCounter.tsx
 
   // Actions to update the game state
   updateGameState: (newState: Partial<GameStateStore>) => void;
@@ -24,7 +23,6 @@ interface GameStateStore {
   undoLastAction: () => void;
   redoLastAction: () => void;
   recordAction: (action: { type: 'add' | 'subtract', value: number }) => void;
-  setCounterZIndex: (zIndex: number) => void; // Added from NumberCounter.tsx
 }
 
 const useGameStore = create<GameStateStore>()(
@@ -37,7 +35,6 @@ const useGameStore = create<GameStateStore>()(
  sequenceId: '',
  history: [],
  historyIndex: -1,
- counterZIndex: 5, // Initial value from NumberCounter.tsx
 
  updateGameState: (newState) => set(newState),
 
@@ -133,8 +130,6 @@ const useGameStore = create<GameStateStore>()(
  historyIndex: historyIndex + 1,
  });
  },
-
- setCounterZIndex: (zIndex) => set({ counterZIndex: zIndex }),
 
  }),
  {

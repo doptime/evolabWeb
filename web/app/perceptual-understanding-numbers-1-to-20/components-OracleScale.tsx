@@ -1,67 +1,36 @@
-"use client";
 import useGameStore from './store-gameStore';
-import {useGestureStore } from "../../components/guesture/gestureStore"
+import { useGestureStore } from "../../components/guesture/gestureStore";
 import { motion } from 'framer-motion';
-import { useEffect } from 'react';
 import { ModifierButton } from './components-ModifierButton';
 import { JudgmentButton } from './components-JudgmentButton';
 import FeedbackContainer from './components-FeedbackContainer';
-import { playDing, initAudio } from './utils-audio'; // Import audio utilities
 
 export default function OracleScale() {
-  const { challengeValue, currentValue, gameState, triggerJudgment, applyModifier, recordAction } = useGameStore();
-  const { gesture, setGesture } = useGestureStore();
+  const { gameState, triggerJudgment } = useGameStore();
+  const { gesture } = useGestureStore();
 
-  // Effect to trigger judgment based on gesture
+  // 增强的手势事件处理
   useEffect(() => {
-    // Initialize audio on first render or user interaction
-    // The initAudio call is now handled by StartChallengeButton click.
-
-    // Handle click gesture on the judgment button
-    if (gesture.type === 'click' && gesture.payload.targetId === 'judgment-btn') {
-      // Ensure we only trigger judgment when in the 'adjusting' state
-      if (gameState === 'adjusting') {
-        triggerJudgment();
-        // Removed playDing() here as it's better handled by JudgmentButton itself
-        // Clear the gesture state after a successful click
-        setGesture({ type: 'idle', payload: {}, timestamp: Date.now(), sequenceId: '' });
+    if (gesture.type === 'click') {
+      const target = document.getElementById(gesture.payload.targetId);
+      if (target) {
+        target.focus();
+        target.click();
       }
     }
-    // Handle clicks on modifier buttons
-    if (gesture.type === 'click' && gesture.payload.targetId?.startsWith('modifier-')) {
-        const parts = gesture.payload.targetId.split('-');
-        if (parts.length === 3) {
-          const operation = parts[1] as 'add' | 'subtract';
-          const value = parseInt(parts[2]);
-          if (!isNaN(value) && gameState === 'adjusting') {
-            applyModifier(value, operation);
-            recordAction({ type: operation, value });
-            // Removed playDing() here as it's better handled by ModifierButton itself
-            // Clear the gesture state after a successful click
-            setGesture({ type: 'idle', payload: {}, timestamp: Date.now(), sequenceId: '' });
-          }
-        }
-      }
-  }, [gesture, triggerJudgment, gameState, applyModifier, recordAction, setGesture]); // Added necessary dependencies
+  }, [gesture]);
 
-  // Effect to handle state transitions after judgment
+  // 游戏初始化强化逻辑
   useEffect(() => {
-    // This effect is for handling side effects after a state change, e.g., showing feedback.
-    // The actual state transitions are handled by the store and triggered by gestures.
-    if (gameState === 'correct') {
-      // Logic for correct state, e.g., show success message and prepare for next round
-    } else if (gameState === 'incorrect') {
-      // Logic for incorrect state, e.g., show error message and allow re-attempt
+    if (gameState === 'idle') {
+      document.getElementById('start-challenge-btn')?.focus();
     }
   }, [gameState]);
 
   return (
     <motion.div 
-      className="relative w-full h-screen flex flex-col items-center justify-center p-4 bg-gradient-to-br from-gray-900 to-black"
-      animate={{
-        scale: gameState === 'correct' ? 1.1 : (gameState === 'incorrect' ? 0.95 : 1),
-        transition: { duration: 0.5, ease: 'easeInOut' }
-      }}
+      className="w-full h-screen"
+      animate={{ scale: gameState === 'correct' ? 1.1 : 1 }}
     >
       {/* Top Section: Challenge and Workspace */}
       <div className="w-full flex-grow flex items-center justify-around mb-10">

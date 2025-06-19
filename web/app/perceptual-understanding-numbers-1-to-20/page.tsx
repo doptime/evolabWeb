@@ -13,6 +13,10 @@ import { useGestureHandler } from './hooks-useGestureHandler'; // Import the han
 
 export default function Index() {
   const { gameState } = useGameStore();
+  useEffect(() => {
+    console.log('Index component mounted',"gameState:", gameState);
+
+  }, [gameState]);
 
   // Initialize and activate the gesture handler
   // The gesture handler is responsible for listening to and processing gesture events.
@@ -35,6 +39,7 @@ export default function Index() {
             <OracleScale />
             {/* Render StartChallengeButton only when the game is in the idle state */}
             {gameState === 'idle' && <StartChallengeButton />}
+            
           </Suspense>
         </motion.div>
       </GestureCaptureProvider>
