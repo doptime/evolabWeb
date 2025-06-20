@@ -1,3 +1,6 @@
+"use client";
+import React, { useEffect } from 'react';
+
 import useGameStore from './store-gameStore';
 import { useGestureStore } from "../../components/guesture/gestureStore";
 import { motion } from 'framer-motion';
@@ -6,7 +9,7 @@ import { JudgmentButton } from './components-JudgmentButton';
 import FeedbackContainer from './components-FeedbackContainer';
 
 export default function OracleScale() {
-  const { gameState, triggerJudgment } = useGameStore();
+  const { gameState, triggerJudgment, challengeValue, currentValue } = useGameStore(); // Destructure challengeValue and currentValue here
   const { gesture } = useGestureStore();
 
   // 增强的手势事件处理
