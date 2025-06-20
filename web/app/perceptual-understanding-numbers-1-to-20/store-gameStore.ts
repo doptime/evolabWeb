@@ -137,8 +137,7 @@ const useGameStore = create<GameStateStore>()(
  },
 
     }),
-    { name: 'game-store', storage: { getItem: (name) => { if (typeof window === 'undefined') return null; return localStorage.getItem(name); }, setItem: (name, value) => { if (typeof window === 'undefined') return; localStorage.setItem(name, value); } } }
-  )
+    { name: 'game-store', storage: { getItem: (name) => { if (typeof window === 'undefined') return null; return localStorage.getItem(name); }, setItem: (name, value) => { if (typeof window === 'undefined') return; localStorage.setItem(name, value); } } })
 );
 
 export default useGameStore;

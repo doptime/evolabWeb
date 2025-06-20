@@ -27,9 +27,6 @@ export default function Index() {
   // It's crucial that this hook is called to start the gesture processing logic.
   useGestureHandler();
 
-  // Initialize audio on user interaction, e.g., clicking the start button
-  // We will trigger initAudio from the StartChallengeButton's click handler.
-
   return (
     <ErrorBoundary>
       {/* GestureCaptureProvider should wrap the elements that capture gestures */}
@@ -42,8 +39,7 @@ export default function Index() {
           <Suspense fallback={<LoadingSpinner />}> 
             <OracleScale />
             {/* Render StartChallengeButton only when the game is in the idle state */}
-            {gameState === 'idle' && <StartChallengeButton />}
-            
+            {gameState === 'idle' && <StartChallengeButton />} 
           </Suspense>
         </motion.div>
       </GestureCaptureProvider>
