@@ -16,15 +16,14 @@ export default function OracleScale() {
     if (gesture.type === 'click') {
       const target = document.getElementById(gesture.payload.targetId);
       if (target) {
-        target.click();
+        // Programmatically click the element if it exists and is a button
+        if (target instanceof HTMLButtonElement) {
+            target.click();
+        }
         setGesture({ type: 'idle', payload: {}, timestamp: Date.now(), sequenceId: '' });
       }
     }
   }, [gesture, setGesture]);
-
-  useEffect(() => {
-    // No direct action needed here as generateChallenge is called in page.tsx
-  }, [gameState]);
 
   return (
     <motion.div
@@ -38,7 +37,8 @@ export default function OracleScale() {
         <div className="w-1/2 h-full flex flex-col items-center justify-center">
           <div className="text-lg text-gray-400 mb-2">命题端</div>
           <div className="w-full h-[calc(100%-40px)] relative">
-            <ChallengeCanvas /> 
+            {/* Pass challengeValue to ChallengeCanvas for rendering */}
+            <ChallengeCanvas key={`challenge-${challengeValue}`} /> 
           </div>
         </div>
 
@@ -46,7 +46,8 @@ export default function OracleScale() {
         <div className="w-1/2 h-full flex flex-col items-center justify-center">
           <div className="text-lg text-gray-400 mb-2">解答端</div>
           <div className="w-full h-[calc(100%-40px)] relative">
-            <WorkspaceCanvas />  {/* 启用 WorkspaceCanvas 的渲染 */}
+            {/* Pass currentValue to WorkspaceCanvas for rendering */}
+            <WorkspaceCanvas key={`workspace-${currentValue}`} />  
           </div>
         </div>
       </div>

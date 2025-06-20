@@ -13,6 +13,7 @@ import { useGestureHandler } from './hooks-useGestureHandler'; // Import the han
 
 export default function Index() {
   const { gameState, generateChallenge } = useGameStore();
+  
   useEffect(() => {
     console.log('Index component mounted',"gameState:", gameState);
     // Generate a challenge when the component mounts and gameState is idle

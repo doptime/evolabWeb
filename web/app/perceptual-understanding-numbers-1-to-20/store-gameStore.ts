@@ -40,12 +40,16 @@ const useGameStore = create<GameStateStore>()(
 
  generateChallenge: () => {
  const newValue = Math.floor(Math.random() * 20) + 1;
+ let initialCurrentValue = Math.floor(Math.random() * 20) + 1;
+ // Ensure initialCurrentValue is different from newValue to guarantee adjustment is needed
+ while (initialCurrentValue === newValue) {
+    initialCurrentValue = Math.floor(Math.random() * 20) + 1;
+ }
+
  // Reset history for a new challenge
  set({
  challengeValue: newValue,
- // Initialize currentValue with a random value, perhaps slightly different from challengeValue
- // This ensures the player has something to adjust
- currentValue: Math.floor(Math.random() * 20) + 1,
+ currentValue: initialCurrentValue, // Initialize with a different value
  gameState: 'adjusting', // Start in adjusting state
  sequenceId: uuidv4(),
  history: [],
@@ -66,7 +70,7 @@ const useGameStore = create<GameStateStore>()(
  currentValue: newValue,
  dragVelocity: { x: 0, y: 0 },
  history: newHistory,
- historyIndex: historyIndex + 1,
+ historyIndex: newHistory.length - 1, // Ensure historyIndex points to the latest action
  });
  },
 
@@ -92,7 +96,7 @@ const useGameStore = create<GameStateStore>()(
  const newHistory = [...history.slice(0, historyIndex + 1), action];
  set({
  history: newHistory,
- historyIndex: historyIndex + 1,
+ historyIndex: newHistory.length - 1, // Ensure historyIndex points to the latest action
  });
  },
 

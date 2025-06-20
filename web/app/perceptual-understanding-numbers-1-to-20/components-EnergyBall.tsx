@@ -55,16 +55,17 @@ const EnergyBall = ({ id, initialPosition }) => {
       });
     };
 
-    const currentRef = ref.current;
-    if (currentRef) {
+    // Ensure ref.current exists before adding event listener
+    const currentMesh = ref.current;
+    if (currentMesh) {
       // Add event listener for collision
-      currentRef.addEventListener('collide', handleCollision);
+      currentMesh.addEventListener('collide', handleCollision);
     }
 
     return () => {
-      if (currentRef) {
+      if (currentMesh) {
         // Clean up event listener
-        currentRef.removeEventListener('collide', handleCollision);
+        currentMesh.removeEventListener('collide', handleCollision);
       }
     };
   }, [ref]); // Depend on ref to ensure listener is re-attached if ref changes
