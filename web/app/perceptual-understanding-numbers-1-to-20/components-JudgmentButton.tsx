@@ -36,8 +36,8 @@ const useJudgmentAnimations = () => {
 };
 
 export const JudgmentButton = () => {
-  const { gameState, triggerJudgment, currentValue, challengeValue } = useGameStore();
-  const { gesture, setGesture } = useGestureStore(); // Import setGesture to clear gesture after click
+  const { gameState, triggerJudgment, resetToAdjusting } = useGameStore(); // Added resetToAdjusting
+  const { gesture, setGesture } = useGestureStore();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const { pulseAnimation, shakeAnimation } = useJudgmentAnimations();
 
@@ -63,10 +63,12 @@ export const JudgmentButton = () => {
     if (gameState === 'adjusting') {
       triggerJudgment();
       playJudgmentSound(); // Play sound on judgment trigger
-      // Clear the gesture state after a successful click
+      setGesture({ type: 'idle', payload: {}, timestamp: Date.now(), sequenceId: '' });
+    } else if (gameState === 'incorrect') { // Handle '再次尝试' click
+      resetToAdjusting();
       setGesture({ type: 'idle', payload: {}, timestamp: Date.now(), sequenceId: '' });
     }
-  }, [gameState, triggerJudgment, setGesture]);
+  }, [gameState, triggerJudgment, resetToAdjusting, setGesture]);
 
   // Effect to play sounds and vibrations based on state changes
   useEffect(() => {
@@ -77,20 +79,12 @@ export const JudgmentButton = () => {
     }
   }, [gameState]);
 
-  // Handle gesture targeting for visual feedback
-  // This effect ensures that if a 'point' gesture targets this button, 
-  // we are aware of it for visual feedback. However, the actual click handling is separate.
-  useEffect(() => {
-    // No specific action needed here for 'point' targeting for this button's functionality. 
-    // The 'isPressed' state handles the visual feedback for the actual click.
-  }, [gesture]);
-
   return (
     <motion.button
       ref={buttonRef}
       id="judgment-btn"
       onClick={handleClick}
-      disabled={gameState !== 'adjusting'} // Button is only clickable in 'adjusting' state
+      disabled={gameState === 'idle' || gameState === 'correct'} // Only disabled in idle or correct states
       className={`${ 
         gameState === 'incorrect' 
           ? 'bg-red-600/30 border-red-500'
@@ -108,11 +102,11 @@ export const JudgmentButton = () => {
       focus:ring-2 
       focus:ring-white/50
       ${isPressed ? 'scale-95' : ''}
-      ${gameState !== 'adjusting' ? 'opacity-60 cursor-not-allowed' : ''}
+      ${(gameState === 'idle' || gameState === 'correct') ? 'opacity-60 cursor-not-allowed' : ''} // Adjusted disabled visual state
       will-change-transform
       w-48 h-16 text-xl
-      `}
-      {...(animationProps as any)} // Apply animation props dynamically
+      `} 
+      {...(animationProps as any)}
       style={{ willChange: 'transform, opacity' }}
       aria-label={buttonText}
     >

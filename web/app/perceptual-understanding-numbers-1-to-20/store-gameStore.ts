@@ -23,6 +23,7 @@ interface GameStateStore {
   undoLastAction: () => void;
   redoLastAction: () => void;
   recordAction: (action: { type: 'add' | 'subtract', value: number }) => void;
+  resetToAdjusting: () => void; // New action to reset to adjusting state
 }
 
 const useGameStore = create<GameStateStore>()(
@@ -49,8 +50,8 @@ const useGameStore = create<GameStateStore>()(
  // Reset history for a new challenge
  set({
  challengeValue: newValue,
- currentValue: initialCurrentValue, // Initialize with a different value
- gameState: 'adjusting', // Start in adjusting state
+ currentValue: initialCurrentValue,
+ gameState: 'adjusting',
  sequenceId: uuidv4(),
  history: [],
  historyIndex: -1,
@@ -59,7 +60,7 @@ const useGameStore = create<GameStateStore>()(
 
  applyModifier: (value: number, operation: 'add' | 'subtract') => {
  const { currentValue, challengeValue, gameState, history, historyIndex } = get();
- if (gameState !== 'adjusting') return; // Only allow adjustments in 'adjusting' state
+ if (gameState !== 'adjusting') return;
 
  const newValue = operation === 'add' ? currentValue + value : currentValue - value;
 
@@ -70,7 +71,7 @@ const useGameStore = create<GameStateStore>()(
  currentValue: newValue,
  dragVelocity: { x: 0, y: 0 },
  history: newHistory,
- historyIndex: newHistory.length - 1, // Ensure historyIndex points to the latest action
+ historyIndex: newHistory.length - 1,
  });
  },
 
@@ -88,7 +89,7 @@ const useGameStore = create<GameStateStore>()(
 
  startChallenge: () => {
  // Reset state to start a new challenge
- get().generateChallenge(); // Call generateChallenge to set up new values and state
+ get().generateChallenge();
  },
 
  recordAction: (action: { type: 'add' | 'subtract', value: number }) => {
@@ -96,7 +97,7 @@ const useGameStore = create<GameStateStore>()(
  const newHistory = [...history.slice(0, historyIndex + 1), action];
  set({
  history: newHistory,
- historyIndex: newHistory.length - 1, // Ensure historyIndex points to the latest action
+ historyIndex: newHistory.length - 1,
  });
  },
 
@@ -136,6 +137,9 @@ const useGameStore = create<GameStateStore>()(
  });
  },
 
+ resetToAdjusting: () => {
+      set({ gameState: 'adjusting' });
+    },
     }),
     { name: 'game-store', storage: { getItem: (name) => { if (typeof window === 'undefined') return null; return localStorage.getItem(name); }, setItem: (name, value) => { if (typeof window === 'undefined') return; localStorage.setItem(name, value); } } })
 );

@@ -1,4 +1,3 @@
-"use client";
 import { motion } from 'framer-motion';
 import { useGestureStore } from "../../components/guesture/gestureStore";
 import useGameStore from './store-gameStore';
@@ -30,20 +29,15 @@ const EnergyBall = ({ id, initialPosition }: EnergyBallProps) => {
   }));
 
   const safeGameState = gameState || 'idle';
-  const color = {
-    idle: '#ffffff',
+  // Base color is white for better visibility, emissive color provides state feedback
+  const baseColor = '#ffffff'; 
+  const emissiveColor = {
+    idle: '#444',
     adjusting: '#00ff00',
     judging: '#ffff00',
     correct: '#00ff00',
     incorrect: '#ff0000'
-  }[safeGameState] || '#ffffff';
-  const emissiveColor = {
-    idle: '#222',
-    adjusting: '#444',
-    judging: '#fff',
-    correct: '#0f0',
-    incorrect: '#f00'
-  }[safeGameState] || '#222';
+  }[safeGameState] || '#444';
 
   // Collision sound effect
   useEffect(() => {
@@ -70,9 +64,9 @@ const EnergyBall = ({ id, initialPosition }: EnergyBallProps) => {
     <mesh
       ref={ref} // Attach the physics ref to the mesh
     >
-      <sphereGeometry args={[0.2, 32, 32]} /> {/* Adjusted radius */}
+      <sphereGeometry args={[0.2, 32, 32]} />
       <meshStandardMaterial
-        color={color}
+        color={baseColor}
         emissive={emissiveColor}
         emissiveIntensity={gameState === 'judging' ? 1.5 : 0.5} // Make balls glow more during judging
       />
