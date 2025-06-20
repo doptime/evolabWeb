@@ -25,8 +25,9 @@ const useJudgmentAnimations = () => {
       y: [0, 5, -5, 0],
       transition: {
         duration: 0.3,
-        type: 'spring',
-        bounce: 0.2
+        type: 'keyframes', // Changed from 'spring' to 'keyframes'
+        times: [0, 0.25, 0.75, 1], // Added times for keyframes
+        ease: 'easeInOut' // Using easeInOut for smoother animation
       }
     }
   };

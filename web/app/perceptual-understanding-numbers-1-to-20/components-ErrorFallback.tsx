@@ -1,3 +1,4 @@
+import React, { useEffect } from 'react';
 import { ErrorFallbackProps } from './components-ErrorBoundary';
 
 const ErrorFallback = ({ error, resetErrorBoundary }: ErrorFallbackProps) => (

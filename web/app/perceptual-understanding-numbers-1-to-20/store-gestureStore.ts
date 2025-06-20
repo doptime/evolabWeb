@@ -22,10 +22,10 @@ export interface GestureState {
 interface GestureStore {
   gesture: GestureState;
   setGesture: (newGesture: GestureState) => void;
+  gestureHistory: GestureState[];
   recordGesture: (gesture: GestureState) => void;
   replayGestures: () => void;
   clearGestureHistory: () => void;
-  gestureHistory: GestureState[];
 }
 
 const useGestureStore = create<GestureStore>((set) => ({

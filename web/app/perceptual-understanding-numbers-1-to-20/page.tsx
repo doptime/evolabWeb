@@ -12,11 +12,14 @@ import { initAudio } from './utils-audio'; // Import initAudio
 import { useGestureHandler } from './hooks-useGestureHandler'; // Import the handler
 
 export default function Index() {
-  const { gameState } = useGameStore();
+  const { gameState, generateChallenge } = useGameStore();
   useEffect(() => {
     console.log('Index component mounted',"gameState:", gameState);
-
-  }, [gameState]);
+    // Generate a challenge when the component mounts and gameState is idle
+    if (gameState === 'idle') {
+      generateChallenge();
+    }
+  }, [gameState, generateChallenge]);
 
   // Initialize and activate the gesture handler
   // The gesture handler is responsible for listening to and processing gesture events.

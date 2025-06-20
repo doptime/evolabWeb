@@ -55,7 +55,7 @@ const StartChallengeButton = () => {
       aria-label="Start Challenge"
       aria-disabled={!isInteractionEnabled}
       // Conditionally render the button based on game state
-      hidden={gameState !== 'idle'}
+      hidden={gameState !== 'idle'} // This hides the button when not in idle state
     >
       {gameState === 'idle' ? 'Start Challenge' : 'Next Challenge'} {/* Text changes based on state */}
     </motion.button>

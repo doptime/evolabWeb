@@ -1,95 +1,93 @@
 "use client";
 import React, { useEffect } from 'react';
-
 import useGameStore from './store-gameStore';
 import { useGestureStore } from "../../components/guesture/gestureStore";
 import { motion } from 'framer-motion';
 import { ModifierButton } from './components-ModifierButton';
 import { JudgmentButton } from './components-JudgmentButton';
 import FeedbackContainer from './components-FeedbackContainer';
+import { ChallengeCanvas, WorkspaceCanvas } from './components-GameCanvas'; // Import the new canvases
 
 export default function OracleScale() {
-  const { gameState, triggerJudgment, challengeValue, currentValue } = useGameStore(); // Destructure challengeValue and currentValue here
-  const { gesture } = useGestureStore();
+  const { gameState, triggerJudgment, challengeValue, currentValue } = useGameStore();
+  const { gesture, setGesture } = useGestureStore();
 
-  // 增强的手势事件处理
   useEffect(() => {
     if (gesture.type === 'click') {
       const target = document.getElementById(gesture.payload.targetId);
       if (target) {
-        target.focus();
         target.click();
+        setGesture({ type: 'idle', payload: {}, timestamp: Date.now(), sequenceId: '' });
       }
     }
-  }, [gesture]);
+  }, [gesture, setGesture]);
 
-  // 游戏初始化强化逻辑
   useEffect(() => {
-    if (gameState === 'idle') {
-      document.getElementById('start-challenge-btn')?.focus();
-    }
+    // No direct action needed here as generateChallenge is called in page.tsx
   }, [gameState]);
 
   return (
-    <motion.div 
-      className="w-full h-screen"
-      animate={{ scale: gameState === 'correct' ? 1.1 : 1 }}
+    <motion.div
+      className="w-full h-screen flex flex-col items-center justify-between p-4"
+      animate={{ scale: gameState === 'correct' ? 1.05 : 1 }}
+      transition={{ duration: 0.5 }}
     >
       {/* Top Section: Challenge and Workspace */}
-      <div className="w-full flex-grow flex items-center justify-around mb-10">
+      <div className="w-full flex-grow flex items-center justify-around">
         {/* Left Tray: Challenge */}
-        <div className="w-1/3 flex flex-col items-center">
-          <div className="text-6xl font-bold text-white mb-4 glow-text">
-            {challengeValue}
+        <div className="w-1/2 h-full flex flex-col items-center justify-center">
+          <div className="text-lg text-gray-400 mb-2">命题端</div>
+          <div className="w-full h-[calc(100%-40px)] relative">
+            <ChallengeCanvas /> 
           </div>
-          <div className="text-lg text-gray-400">命题端</div>
-          {/* Placeholder for energy balls on the challenge side if needed */}
         </div>
 
         {/* Right Tray: Workspace */}
-        <div className="w-1/3 flex flex-col items-center relative">
-          <div className="text-5xl font-bold text-white mb-4 glow-text">
-            {currentValue}
-          </div>
-          <div className="text-lg text-gray-400">解答端</div>
-          {/* Placeholder for energy balls in the workspace */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-             {/* This is a placeholder for where EnergyBall components would be rendered */}
-             {/* For example: <EnergyBall id="ws-ball-1" initialPosition={[0, 0, 0]} /> */}
+        <div className="w-1/2 h-full flex flex-col items-center justify-center">
+          <div className="text-lg text-gray-400 mb-2">解答端</div>
+          <div className="w-full h-[calc(100%-40px)] relative">
+            <WorkspaceCanvas />  {/* 启用 WorkspaceCanvas 的渲染 */}
           </div>
         </div>
       </div>
 
       {/* Middle Section: The Scale */}
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-48 flex items-center justify-center">
-        {/* SVG for the scale can be placed here */}
-        <svg className='w-full h-full' viewBox='0 0 200 200'>
+      <div className="relative w-full max-w-lg h-32 flex items-center justify-center my-4">
+        <svg className='w-full h-full' viewBox='0 0 200 100'>
           <g id='physics-scale'>
+            {/* Scale base */}
+            <path d="M 90 90 L 100 70 L 110 90 Z" fill="#444" />
             {/* Scale beam */}
-            <rect x='50' y='50' width='100' height='20' rx='10' fill='#222' />
+            <motion.rect 
+              x='50' y='60' width='100' height='10' rx='5' fill='#222' 
+              initial={{ rotate: 0 }}
+              animate={{
+                rotate: (currentValue - challengeValue) * 2,
+                transformOrigin: 'center 65px'
+              }}
+              transition={{ type: "spring", stiffness: 100, damping: 10 }}
+            />
             {/* Scale pivot */}
-            <circle cx='100' cy='40' r='10' fill='#444' />
-            {/* Placeholder for the pointer */}
-            <motion.line 
-              id='scale-pointer'
-              x1='100' y1='40'
-              x2='100' y2='10'
-              stroke='white' 
-              strokeWidth='4'
+            <circle cx='100' cy='65' r='8' fill='#666' />
+            {/* Scale pointer (simplified) */}
+            <motion.line
+              x1='100' y1='65'
+              x2='100' y2='50'
+              stroke='white'
+              strokeWidth='3'
               strokeLinecap='round'
               animate={{
-                // Basic pointer animation based on value difference. Needs actual calculation.
-                rotate: (currentValue - challengeValue) * 2, // Simplified rotation
-                transformOrigin: 'center bottom'
+                rotate: (currentValue - challengeValue) * 2,
+                transformOrigin: 'center 65px'
               }}
-              style={{ willChange: 'transform' }}
+              transition={{ type: "spring", stiffness: 100, damping: 10 }}
             />
           </g>
         </svg>
       </div>
 
       {/* Bottom Section: Controls */}
-      <div className="absolute bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-6">
+      <div className="flex flex-col items-center gap-4">
         {/* Modifier Buttons */}
         <div className="flex gap-4">
           <ModifierButton value={1} operation="subtract" />
@@ -100,7 +98,7 @@ export default function OracleScale() {
         {/* Judgment Button */}
         <JudgmentButton />
       </div>
-      
+
       {/* Feedback Container for correct/incorrect messages */}
       <FeedbackContainer />
     </motion.div>

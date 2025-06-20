@@ -27,7 +27,7 @@ interface GameStateStore {
 
 const useGameStore = create<GameStateStore>()(
  persist(
- (set, get) => ({
+    (set, get) => ({
  challengeValue: 0,
  currentValue: 0,
  gameState: 'idle',
@@ -44,6 +44,7 @@ const useGameStore = create<GameStateStore>()(
  set({
  challengeValue: newValue,
  // Initialize currentValue with a random value, perhaps slightly different from challengeValue
+ // This ensures the player has something to adjust
  currentValue: Math.floor(Math.random() * 20) + 1,
  gameState: 'adjusting', // Start in adjusting state
  sequenceId: uuidv4(),
@@ -131,23 +132,9 @@ const useGameStore = create<GameStateStore>()(
  });
  },
 
- }),
- {
- name: 'game-store',
- storage: {
- getItem: (name) => {
- // Use SSR-safe localStorage access
- if (typeof window === 'undefined') return null;
- return localStorage.getItem(name);
- },
- setItem: (name, value) => {
- // Use SSR-safe localStorage access
- if (typeof window === 'undefined') return;
- localStorage.setItem(name, value);
- }
- }
- }
- )
+    }),
+    { name: 'game-store', storage: { getItem: (name) => { if (typeof window === 'undefined') return null; return localStorage.getItem(name); }, setItem: (name, value) => { if (typeof window === 'undefined') return; localStorage.setItem(name, value); } } }
+  )
 );
 
 export default useGameStore;
