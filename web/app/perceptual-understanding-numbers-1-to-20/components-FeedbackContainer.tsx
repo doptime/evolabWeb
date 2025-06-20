@@ -8,34 +8,53 @@ import FeedbackIcon from './components-FeedbackIcon';
 
 export default function FeedbackContainer() {
   const { gameState, challengeValue, currentValue } = useGameStore();
-  const { gesture } = useGestureStore(); // Not directly used here, but could be for gesture-based dismissal
-  const [animationPerformance, setAnimationPerformance] = useState({ fps: 60 }); // Placeholder for performance metrics
+  const { gesture } = useGestureStore(); 
+  const [animationPerformance, setAnimationPerformance] = useState({ fps: 60 });
 
   // Determine the feedback content based on the game state
   const feedbackContent = useMemo(() => {
-    if (gameState === 'correct') {
-      return {
-        title: '完美均衡',
-        message: `恭喜你！ ${challengeValue} 对比 ${currentValue}`, // Display values for context
-        icon: 'success',
-        color: 'text-green-400',
-      };
-    } else if (gameState === 'incorrect') {
-      return {
-        title: '再次尝试',
-        message: `还差一点！ ${currentValue} vs ${challengeValue}`, // Display values for context
-        icon: 'error',
-        color: 'text-red-500',
-      };
+    const difference = Math.abs(currentValue - challengeValue);
+    let title = '';
+    let message = '';
+    let icon = '';
+    let color = '';
+
+    switch (gameState) {
+      case 'perfect':
+        title = '完美均衡！';
+        message = `恭喜你！挑战值 ${challengeValue} 与当前值 ${currentValue} 完全匹配！`;
+        icon = 'success';
+        color = 'text-green-400';
+        break;
+      case 'great':
+        title = '非常接近！';
+        message = `你只差一点点！挑战值 ${challengeValue}，当前值 ${currentValue}。`;
+        icon = 'success'; // Still a success, but less perfect
+        color = 'text-yellow-400';
+        break;
+      case 'good':
+        title = '做得不错！';
+        message = `你已经很接近了！挑战值 ${challengeValue}，当前值 ${currentValue}。`;
+        icon = 'success'; // Still a success
+        color = 'text-orange-400';
+        break;
+      case 'incorrect':
+        title = '再次尝试';
+        message = `还差一点！挑战值 ${challengeValue}，当前值 ${currentValue}。`;
+        icon = 'error';
+        color = 'text-red-500';
+        break;
+      default:
+        return null; // No feedback needed for other states
     }
-    return null; // No feedback needed for other states
+    return { title, message, icon, color };
   }, [gameState, challengeValue, currentValue]);
 
   // Effect to play audio feedback based on state changes
   useEffect(() => {
     if (feedbackContent) {
       if (feedbackContent.icon === 'success') {
-        playDing(); // Use playDing for success feedback
+        playDing(); 
       } else if (feedbackContent.icon === 'error') {
         playError();
       }

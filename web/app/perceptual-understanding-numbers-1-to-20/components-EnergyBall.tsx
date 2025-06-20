@@ -10,42 +10,73 @@ import React, { useEffect, useRef, useMemo } from 'react';
 interface EnergyBallProps {
   id: string;
   initialPosition: [number, number, number];
+  trayWidth: number; // Add tray dimensions for boundary checks
+  trayDepth: number;
+  trayOffsetX: number;
 }
 
-const EnergyBall = ({ id, initialPosition }: EnergyBallProps) => {
+const getRandomBrightColor = () => {
+  const colors = [
+    '#FF6347', // Tomato
+    '#FFD700', // Gold
+    '#ADFF2F', // GreenYellow
+    '#00CED1', // DarkTurquoise
+    '#BA55D3', // MediumOrchid
+    '#FF69B4', // HotPink
+    '#00BFFF', // DeepSkyBlue
+    '#7FFF00', // Chartreuse
+  ];
+  return colors[Math.floor(Math.random() * colors.length)];
+};
+
+const EnergyBall = ({ id, initialPosition, trayWidth, trayDepth, trayOffsetX }: EnergyBallProps) => {
   const { gameState } = useGameStore();
   const { gesture } = useGestureStore();
-  
-  // Initialize useSphere hook. The ref is a React ref that will be attached to the mesh.
-  // api is an object with methods to control the physics body.
+  const randomColor = useMemo(() => getRandomBrightColor(), []); // Memoize color
+
   const [ref, api] = useSphere(() => ({
     mass: 1,
     position: initialPosition,
-    args: [0.2], // Sphere radius, adjusted for better scale in new scene
-    restitution: 0.7, // Bounciness, slightly reduced
-    friction: 0.5, // Friction, slightly increased
-    linearDamping: 0.8, // Add linear damping to reduce infinite bouncing
-    angularDamping: 0.8, // Add angular damping
+    args: [0.2], // Sphere radius
+    restitution: 0.7,
+    friction: 0.5,
+    linearDamping: 0.8,
+    angularDamping: 0.8,
   }));
 
-  const safeGameState = gameState || 'idle';
-  // Base color is white for better visibility, emissive color provides state feedback
-  const baseColor = '#ffffff'; 
-  const emissiveColor = {
-    idle: '#444',
-    adjusting: '#00ff00',
-    judging: '#ffff00',
-    correct: '#00ff00',
-    incorrect: '#ff0000'
-  }[safeGameState] || '#444';
+  // Use useFrame for continuous boundary checking and correction
+  useFrame(() => {
+    if (ref.current) {
+      const [x, y, z] = ref.current.position.toArray();
+      const halfWidth = trayWidth / 2;
+      const halfDepth = trayDepth / 2;
+      const radius = 0.2; // Ball radius
+
+      // Correct X position
+      if (x < trayOffsetX - halfWidth + radius) {
+        api.position.set(trayOffsetX - halfWidth + radius, y, z);
+        api.velocity.set(0, api.velocity.current[1], api.velocity.current[2]); // Stop x velocity
+      } else if (x > trayOffsetX + halfWidth - radius) {
+        api.position.set(trayOffsetX + halfWidth - radius, y, z);
+        api.velocity.set(0, api.velocity.current[1], api.velocity.current[2]); // Stop x velocity
+      }
+
+      // Correct Z position
+      if (z < -halfDepth + radius) {
+        api.position.set(x, y, -halfDepth + radius);
+        api.velocity.set(api.velocity.current[0], api.velocity.current[1], 0); // Stop z velocity
+      } else if (z > halfDepth - radius) {
+        api.position.set(x, y, halfDepth - radius);
+        api.velocity.set(api.velocity.current[0], api.velocity.current[1], 0); // Stop z velocity
+      }
+    }
+  });
 
   // Collision sound effect
   useEffect(() => {
-    // Ensure the ref.current and its 'api' (from useSphere) are available
     if (api && api.addEventListener) {
       const unsubscribe = api.addEventListener('collide', (e) => {
         const velocityMagnitude = Math.hypot(...e.contact.impactVelocity);
-        // Only play sound if collision velocity is significant to avoid constant noise
         if (velocityMagnitude > 0.5) {
           playEnergyBallSound('collision', {
             velocity: velocityMagnitude,
@@ -54,33 +85,37 @@ const EnergyBall = ({ id, initialPosition }: EnergyBallProps) => {
         }
       });
       return () => {
-        // Clean up event listener when component unmounts or api changes
         unsubscribe();
       };
     }
-  }, [api]); // Depend on api to ensure listener is re-attached if api changes
+  }, [api, ref]);
+
+  const emissiveColor = {
+    idle: '#444',
+    adjusting: randomColor, // Use random bright color during adjusting
+    judging: '#ffff00',
+    correct: '#00ff00',
+    incorrect: '#ff0000'
+  }[gameState] || randomColor;
 
   return (
-    <mesh
-      ref={ref} // Attach the physics ref to the mesh
-    >
+    <mesh ref={ref}>
       <sphereGeometry args={[0.2, 32, 32]} />
       <meshStandardMaterial
-        color={baseColor}
+        color={randomColor}
         emissive={emissiveColor}
-        emissiveIntensity={gameState === 'judging' ? 1.5 : 0.5} // Make balls glow more during judging
+        emissiveIntensity={gameState === 'judging' ? 1.5 : 0.5}
       />
     </mesh>
   );
 };
 
-// Memoize the component to prevent unnecessary re-renders
 export default React.memo(EnergyBall, (prevProps, nextProps) => {
-  // Only re-render if the id changes (meaning it's a new ball or removed/re-added)
-  // or if initialPosition significantly changes (though physics will handle movement)
-  // or if game state changes affecting visual properties.
   return prevProps.id === nextProps.id &&
          prevProps.initialPosition[0] === nextProps.initialPosition[0] &&
          prevProps.initialPosition[1] === nextProps.initialPosition[1] &&
-         prevProps.initialPosition[2] === nextProps.initialPosition[2];
+         prevProps.initialPosition[2] === nextProps.initialPosition[2] &&
+         prevProps.trayWidth === nextProps.trayWidth &&
+         prevProps.trayDepth === nextProps.trayDepth &&
+         prevProps.trayOffsetX === nextProps.trayOffsetX;
 });

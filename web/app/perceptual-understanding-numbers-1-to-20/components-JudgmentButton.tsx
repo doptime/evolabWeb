@@ -36,7 +36,7 @@ const useJudgmentAnimations = () => {
 };
 
 export const JudgmentButton = () => {
-  const { gameState, triggerJudgment, resetToAdjusting } = useGameStore(); // Added resetToAdjusting
+  const { gameState, triggerJudgment, resetToAdjusting, startChallenge } = useGameStore(); // Added startChallenge
   const { gesture, setGesture } = useGestureStore();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const { pulseAnimation, shakeAnimation } = useJudgmentAnimations();
@@ -44,7 +44,9 @@ export const JudgmentButton = () => {
   // Determine button text and animation based on game state
   const buttonText = {
     adjusting: '开始审判',
-    correct: '完美均衡',
+    perfect: '新的挑战',
+    great: '新的挑战',
+    good: '新的挑战',
     incorrect: '再次尝试',
     idle: '等待挑战'
   }[gameState] || '开始审判';
@@ -67,14 +69,15 @@ export const JudgmentButton = () => {
     } else if (gameState === 'incorrect') { // Handle '再次尝试' click
       resetToAdjusting();
       setGesture({ type: 'idle', payload: {}, timestamp: Date.now(), sequenceId: '' });
+    } else if (gameState === 'perfect' || gameState === 'great' || gameState === 'good') { // Handle '新的挑战' click
+      startChallenge();
+      setGesture({ type: 'idle', payload: {}, timestamp: Date.now(), sequenceId: '' });
     }
-  }, [gameState, triggerJudgment, resetToAdjusting, setGesture]);
+  }, [gameState, triggerJudgment, resetToAdjusting, startChallenge, setGesture]);
 
   // Effect to play sounds and vibrations based on state changes
   useEffect(() => {
-    if (gameState === 'correct') {
-      // Optionally play a success sound or animation here
-    } else if (gameState === 'incorrect') {
+    if (gameState === 'incorrect') {
       playErrorVibration(); // Play vibration for incorrect state
     }
   }, [gameState]);
@@ -84,13 +87,15 @@ export const JudgmentButton = () => {
       ref={buttonRef}
       id="judgment-btn"
       onClick={handleClick}
-      disabled={gameState === 'idle' || gameState === 'correct'} // Only disabled in idle or correct states
+      disabled={gameState === 'idle'} // Only disabled in idle state
       className={`${ 
         gameState === 'incorrect' 
           ? 'bg-red-600/30 border-red-500'
-          : gameState === 'adjusting'
-            ? 'bg-gradient-to-br from-blue-500/20 to-purple-500/20 border-blue-400'
-            : 'bg-gray-700/30 border-gray-500'
+          : (gameState === 'perfect' || gameState === 'great' || gameState === 'good')
+            ? 'bg-green-600/30 border-green-500'
+            : gameState === 'adjusting'
+              ? 'bg-gradient-to-br from-blue-500/20 to-purple-500/20 border-blue-400'
+              : 'bg-gray-700/30 border-gray-500'
       } 
       glass-morphic 
       border-2 
@@ -102,7 +107,7 @@ export const JudgmentButton = () => {
       focus:ring-2 
       focus:ring-white/50
       ${isPressed ? 'scale-95' : ''}
-      ${(gameState === 'idle' || gameState === 'correct') ? 'opacity-60 cursor-not-allowed' : ''} // Adjusted disabled visual state
+      ${(gameState === 'idle') ? 'opacity-60 cursor-not-allowed' : ''} // Adjusted disabled visual state
       will-change-transform
       w-48 h-16 text-xl
       `} 
