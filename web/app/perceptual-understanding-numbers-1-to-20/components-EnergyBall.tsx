@@ -37,7 +37,7 @@ const EnergyBall = ({ id, initialPosition, trayWidth, trayDepth, trayOffsetX }: 
   const [ref, api] = useSphere(() => ({
     mass: 1,
     position: initialPosition,
-    args: [0.2], // Sphere radius
+    args: [0.3], // Increased sphere radius for larger appearance
     restitution: 0.7,
     friction: 0.5,
     linearDamping: 0.8,
@@ -50,7 +50,7 @@ const EnergyBall = ({ id, initialPosition, trayWidth, trayDepth, trayOffsetX }: 
       const [x, y, z] = ref.current.position.toArray();
       const halfWidth = trayWidth / 2;
       const halfDepth = trayDepth / 2;
-      const radius = 0.2; // Ball radius
+      const radius = 0.3; // Ball radius, should match args
 
       // Correct X position
       if (x < trayOffsetX - halfWidth + radius) {
@@ -100,7 +100,7 @@ const EnergyBall = ({ id, initialPosition, trayWidth, trayDepth, trayOffsetX }: 
 
   return (
     <mesh ref={ref}>
-      <sphereGeometry args={[0.2, 32, 32]} />
+      <sphereGeometry args={[0.3, 32, 32]} /> {/* Sphere radius should match args */}
       <meshStandardMaterial
         color={randomColor}
         emissive={emissiveColor}

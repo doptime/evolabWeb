@@ -2,7 +2,7 @@ import useGameStore from './store-gameStore';
 import { motion } from 'framer-motion';
 import {useGestureStore } from "../../components/guesture/gestureStore"
 import { useEffect, useRef, useCallback } from 'react';
-import { playJudgmentSound, playErrorVibration } from './utils-audio';
+import { playJudgmentSound, playErrorVibration, playDing, playError } from './utils-audio'; // Import playDing and playError for feedback
 
 const useJudgmentAnimations = () => {
   // Animation for the 'Start Judgment' button pulsing
@@ -36,62 +36,86 @@ const useJudgmentAnimations = () => {
 };
 
 export const JudgmentButton = () => {
-  const { gameState, triggerJudgment, resetToAdjusting, startChallenge } = useGameStore(); // Added startChallenge
+  const { gameState, triggerJudgment, resetToAdjusting, startChallenge, challengeValue, currentValue } = useGameStore(); // Added startChallenge and values for feedback
   const { gesture, setGesture } = useGestureStore();
   const buttonRef = useRef<HTMLButtonElement>(null);
   const { pulseAnimation, shakeAnimation } = useJudgmentAnimations();
 
   // Determine button text and animation based on game state
-  const buttonText = {
-    adjusting: '开始审判',
-    perfect: '新的挑战',
-    great: '新的挑战',
-    good: '新的挑战',
-    incorrect: '再次尝试',
-    idle: '等待挑战'
-  }[gameState] || '开始审判';
+  let buttonText;
+  let animationProps;
+  let isInteractionEnabled = true; // Assume enabled by default, then disable if needed
 
-  const animationProps = {
-    adjusting: pulseAnimation,
-    incorrect: shakeAnimation,
-    // No animation for 'correct' or 'idle' states by default
-  }[gameState];
+  switch (gameState) {
+    case 'adjusting':
+      buttonText = '开始审判';
+      animationProps = pulseAnimation;
+      break;
+    case 'correct':
+      buttonText = '新的挑战';
+      animationProps = null; // No animation for 'correct' state
+      break;
+    case 'great':
+      buttonText = '新的挑战';
+      animationProps = null;
+      break;
+    case 'good':
+      buttonText = '新的挑战';
+      animationProps = null;
+      break;
+    case 'incorrect':
+      buttonText = '再次尝试';
+      animationProps = shakeAnimation;
+      break;
+    case 'idle':
+    default:
+      buttonText = '等待挑战';
+      animationProps = null;
+      isInteractionEnabled = false; // Disable button when idle
+      break;
+  }
 
   // Check if the button is being pressed by gesture
   const isPressed = gesture.type === 'click' && gesture.payload.targetId === 'judgment-btn';
 
+  // Calculate difference for feedback intensity
+  const difference = Math.abs(currentValue - challengeValue);
+  
   // Handle the click action
   const handleClick = useCallback(() => {
+    if (!isInteractionEnabled) return; // Prevent action if not enabled
+
     if (gameState === 'adjusting') {
       triggerJudgment();
-      playJudgmentSound(); // Play sound on judgment trigger
-      setGesture({ type: 'idle', payload: {}, timestamp: Date.now(), sequenceId: '' });
+      playJudgmentSound();
     } else if (gameState === 'incorrect') { // Handle '再次尝试' click
-      resetToAdjusting();
-      setGesture({ type: 'idle', payload: {}, timestamp: Date.now(), sequenceId: '' });
-    } else if (gameState === 'perfect' || gameState === 'great' || gameState === 'good') { // Handle '新的挑战' click
-      startChallenge();
-      setGesture({ type: 'idle', payload: {}, timestamp: Date.now(), sequenceId: '' });
+      resetToAdjusting(); // Reset to adjusting state
+    } else if (gameState === 'correct' || gameState === 'great' || gameState === 'good') { // Handle '新的挑战' click
+      startChallenge(); // Start a new challenge
     }
-  }, [gameState, triggerJudgment, resetToAdjusting, startChallenge, setGesture]);
+    setGesture({ type: 'idle', payload: {}, timestamp: Date.now(), sequenceId: '' }); // Clear gesture after any click
+  }, [gameState, triggerJudgment, resetToAdjusting, startChallenge, setGesture, isInteractionEnabled]);
 
   // Effect to play sounds and vibrations based on state changes
   useEffect(() => {
     if (gameState === 'incorrect') {
       playErrorVibration(); // Play vibration for incorrect state
+      playError(); // Play error sound
+    } else if (gameState === 'correct' || gameState === 'great' || gameState === 'good') {
+      playDing(); // Play general success sound for all success states
     }
-  }, [gameState]);
+  }, [gameState]); 
 
   return (
     <motion.button
       ref={buttonRef}
       id="judgment-btn"
       onClick={handleClick}
-      disabled={gameState === 'idle'} // Only disabled in idle state
+      disabled={!isInteractionEnabled}
       className={`${ 
         gameState === 'incorrect' 
           ? 'bg-red-600/30 border-red-500'
-          : (gameState === 'perfect' || gameState === 'great' || gameState === 'good')
+          : (gameState === 'correct' || gameState === 'great' || gameState === 'good')
             ? 'bg-green-600/30 border-green-500'
             : gameState === 'adjusting'
               ? 'bg-gradient-to-br from-blue-500/20 to-purple-500/20 border-blue-400'
@@ -107,7 +131,7 @@ export const JudgmentButton = () => {
       focus:ring-2 
       focus:ring-white/50
       ${isPressed ? 'scale-95' : ''}
-      ${(gameState === 'idle') ? 'opacity-60 cursor-not-allowed' : ''} // Adjusted disabled visual state
+      ${!isInteractionEnabled ? 'opacity-60 cursor-not-allowed' : ''} 
       will-change-transform
       w-48 h-16 text-xl
       `} 

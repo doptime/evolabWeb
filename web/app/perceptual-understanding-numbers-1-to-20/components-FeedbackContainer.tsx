@@ -20,7 +20,7 @@ export default function FeedbackContainer() {
     let color = '';
 
     switch (gameState) {
-      case 'perfect':
+      case 'correct':
         title = '完美均衡！';
         message = `恭喜你！挑战值 ${challengeValue} 与当前值 ${currentValue} 完全匹配！`;
         icon = 'success';

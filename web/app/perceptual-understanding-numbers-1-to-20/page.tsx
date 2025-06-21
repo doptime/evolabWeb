@@ -39,7 +39,7 @@ export default function Index() {
           <Suspense fallback={<LoadingSpinner />}> 
             <OracleScale />
             {/* Render StartChallengeButton only when the game is in the idle state */}
-            {gameState === 'idle' && <StartChallengeButton />} 
+            {gameState === 'idle' && <StartChallengeButton />} {/* Only show StartChallengeButton in 'idle' state */}
           </Suspense>
         </motion.div>
       </GestureCaptureProvider>

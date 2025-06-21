@@ -3,7 +3,7 @@ import { persist } from 'zustand/middleware';
 import { v4 as uuidv4 } from 'uuid';
 
 // Define the possible states for the game
-export type GameState = 'idle' | 'adjusting' | 'judging' | 'correct' | 'incorrect';
+export type GameState = 'idle' | 'adjusting' | 'judging' | 'correct' | 'incorrect' | 'great' | 'good'; // Added 'great' and 'good' for finer feedback
 
 interface GameStateStore {
   challengeValue: number; // The target value to reach
@@ -13,6 +13,7 @@ interface GameStateStore {
   sequenceId: string;     // Unique identifier for a game sequence
   history: { type: 'add' | 'subtract', value: number }[]; // History for undo/redo
   historyIndex: number;   // Current index in the history
+  isNumericChallenge: boolean; // Flag to indicate if the challenge is numeric
 
   // Actions to update the game state
   updateGameState: (newState: Partial<GameStateStore>) => void;
@@ -36,6 +37,7 @@ const useGameStore = create<GameStateStore>()(
  sequenceId: '',
  history: [],
  historyIndex: -1,
+ isNumericChallenge: true, // Default to numeric challenge
 
  updateGameState: (newState) => set(newState),
 
@@ -47,6 +49,9 @@ const useGameStore = create<GameStateStore>()(
     initialCurrentValue = Math.floor(Math.random() * 20) + 1;
  }
 
+ // 50% chance for numeric challenge, 50% for graphical
+ const isNumeric = Math.random() < 0.5;
+
  // Reset history for a new challenge
  set({
  challengeValue: newValue,
@@ -55,6 +60,7 @@ const useGameStore = create<GameStateStore>()(
  sequenceId: uuidv4(),
  history: [],
  historyIndex: -1,
+ isNumericChallenge: isNumeric,
  });
  },
 
@@ -62,7 +68,12 @@ const useGameStore = create<GameStateStore>()(
  const { currentValue, challengeValue, gameState, history, historyIndex } = get();
  if (gameState !== 'adjusting') return;
 
- const newValue = operation === 'add' ? currentValue + value : currentValue - value;
+ let newValue = operation === 'add' ? currentValue + value : currentValue - value;
+
+ // Prevent negative ball count
+ if (newValue < 0) {
+        newValue = 0;
+    }
 
  // Record action for undo/redo
  const newHistory = [...history.slice(0, historyIndex + 1), { type: operation, value }];
@@ -79,11 +90,20 @@ const useGameStore = create<GameStateStore>()(
  const { currentValue, challengeValue, gameState } = get();
  if (gameState !== 'adjusting') return;
 
- // Determine if the values match
- if (currentValue === challengeValue) {
- set({ gameState: 'correct' });
+ const difference = Math.abs(currentValue - challengeValue);
+
+ // 4. Adjust success判定逻辑: 差值在3以内视为成功
+ if (difference === 0) {
+ set({ gameState: 'correct' }); // Perfect match
+ } else if (difference <= 3) {
+ // 差值越小，响应越热烈
+ if (difference === 1) {
+ set({ gameState: 'great' }); // Great match
  } else {
- set({ gameState: 'incorrect' });
+ set({ gameState: 'good' }); // Good match
+ }
+ } else {
+ set({ gameState: 'incorrect' }); // Outside the acceptable range
  }
  },
 
@@ -113,6 +133,11 @@ const useGameStore = create<GameStateStore>()(
  newValue = currentValue + previousAction.value;
  }
 
+ // Prevent negative ball count
+ if (newValue < 0) {
+        newValue = 0;
+    }
+
  set({
  currentValue: newValue,
  historyIndex: historyIndex - 1,
@@ -140,7 +165,7 @@ const useGameStore = create<GameStateStore>()(
  resetToAdjusting: () => {
       set({ gameState: 'adjusting' });
     },
-    }),
+    }), 
     { name: 'game-store', storage: { getItem: (name) => { if (typeof window === 'undefined') return null; return localStorage.getItem(name); }, setItem: (name, value) => { if (typeof window === 'undefined') return; localStorage.setItem(name, value); } } })
 );
 
