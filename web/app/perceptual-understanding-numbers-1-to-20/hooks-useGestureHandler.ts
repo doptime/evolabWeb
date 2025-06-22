@@ -3,7 +3,7 @@ import React, { useEffect } from 'react';
 import { useGestureStore, GestureState } from "../../components/guesture/gestureStore";
 import useGameStore from './store-gameStore';
 
-// Define GestureType and ClickPayload for better type safety
+// Define ClickPayload for better type safety
 interface ClickPayload {
   targetId?: string;
 }
@@ -11,10 +11,8 @@ interface ClickPayload {
 export function useGestureHandler() {
   const { gesture, setGesture } = useGestureStore();
   const { 
-    applyModifier, 
-    triggerJudgment, 
-    undoLastAction, 
-    redoLastAction 
+    applyModifier,
+    triggerJudgment,
   } = useGameStore();
 
   // Gesture event processor
@@ -49,19 +47,14 @@ export function useGestureHandler() {
           applyModifier(value, operation);
           // Clear the gesture state after a successful click to prevent re-triggering
           setGesture({ type: 'idle', payload: {}, timestamp: Date.now(), sequenceId: '' });
-          // Audio feedback for modifier click will be handled in ModifierButton component for better context
         }
       }
     } else if (payload.targetId === 'judgment-btn') {
       triggerJudgment();
       // Clear the gesture state after a successful click to prevent re-triggering
       setGesture({ type: 'idle', payload: {}, timestamp: Date.now(), sequenceId: '' });
-      // Audio feedback for judgment click will be handled in JudgmentButton component
-    } else if (payload.targetId === 'start-challenge-btn') {
-      // The click handler for start-challenge-btn is in StartChallengeButton component.
-      // No need to handle it here, but if you wanted to, you would call startChallenge() and clear gesture.
-    }
-    // Add other button click handlers here if necessary
+    } 
+    // StartChallengeButton's click is now handled internally by StartChallengeButton component.
   }
 
   // Add other gesture handling functions as needed (e.g., for drag, transform)

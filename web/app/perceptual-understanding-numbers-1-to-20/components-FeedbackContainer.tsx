@@ -3,21 +3,22 @@ import { motion, AnimatePresence } from 'framer-motion';
 import useGameStore from './store-gameStore';
 import {useGestureStore } from "../../components/guesture/gestureStore"
 import { useEffect, useMemo, useState } from 'react';
-import { playDing, playError } from './utils-audio'; // Assuming these audio functions exist
+import { playDing, playError } from './utils-audio';
 import FeedbackIcon from './components-FeedbackIcon';
 
 export default function FeedbackContainer() {
-  const { gameState, challengeValue, currentValue } = useGameStore();
-  const { gesture } = useGestureStore(); 
-  const [animationPerformance, setAnimationPerformance] = useState({ fps: 60 });
+  const { gameState, challengeValue, currentValue, startChallenge } = useGameStore(); // Removed hideFeedback, using startChallenge for dismissal
+  const { gesture, setGesture } = useGestureStore(); 
+  const [animationPerformance, setAnimationPerformance] = useState({ fps: 60 }); // Currently unused
 
   // Determine the feedback content based on the game state
   const feedbackContent = useMemo(() => {
-    const difference = Math.abs(currentValue - challengeValue);
+    // No need to calculate difference here, as gameState already reflects it
     let title = '';
     let message = '';
     let icon = '';
     let color = '';
+    const difference = Math.abs(currentValue - challengeValue);
 
     switch (gameState) {
       case 'correct':
@@ -53,13 +54,20 @@ export default function FeedbackContainer() {
   // Effect to play audio feedback based on state changes
   useEffect(() => {
     if (feedbackContent) {
-      if (feedbackContent.icon === 'success') {
-        playDing(); 
-      } else if (feedbackContent.icon === 'error') {
+      if (gameState === 'correct' || gameState === 'great' || gameState === 'good') {
+        playDing(); // Play a general success sound, can be refined to different 'ding' sounds for each level of success
+      } else if (gameState === 'incorrect') {
         playError();
       }
-    } 
-  }, [feedbackContent]);
+    }
+  }, [feedbackContent, gameState]);
+
+  // Handle button click to dismiss feedback or start new challenge
+  const handleDismiss = () => {
+    // Always start a new challenge when dismissing feedback after a judgment
+    startChallenge(); 
+    setGesture({ type: 'idle', payload: {}, timestamp: Date.now(), sequenceId: '' }); // Clear gesture after click
+  };
 
   // If no feedback is needed, return null
   if (!feedbackContent) return null;
@@ -86,7 +94,15 @@ export default function FeedbackContainer() {
           <motion.p className="text-lg text-white mb-6">
             {feedbackContent.message}
           </motion.p>
-          {/* Optionally add a button to dismiss or proceed */}
+          <motion.button
+            id="feedback-dismiss-btn"
+            onClick={handleDismiss}
+            className="mt-4 px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-md transition-colors duration-200"
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+          >
+            {feedbackContent.icon === 'error' ? '再次尝试' : '新的挑战'}
+          </motion.button>
         </motion.div>
       </motion.div>
     </AnimatePresence>

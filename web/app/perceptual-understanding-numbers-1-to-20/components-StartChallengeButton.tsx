@@ -2,30 +2,21 @@
 import { motion } from 'framer-motion';
 import useGameStore from './store-gameStore';
 import { useGestureStore } from "../../components/guesture/gestureStore";
-import { playClickSound, initAudio } from './utils-audio'; // Import initAudio here
+import { playClickSound, initAudio } from './utils-audio';
 
 const StartChallengeButton = () => {
   const { gameState, startChallenge } = useGameStore();
-  const { gesture, setGesture } = useGestureStore(); // Import setGesture to clear gesture after click
+  const { gesture, setGesture } = useGestureStore(); 
 
-  // Determine if the button should be interactive based on game state
+  // The button should only be interactive and visible when the game is truly idle (initial state)
+  // After a challenge, FeedbackContainer's button handles starting the next one.
   const isInteractionEnabled = gameState === 'idle';
 
-  // Dynamic button styling based on game state
-  const buttonStyle = {
-    idle: 'bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg hover:shadow-xl',
-    correct: 'bg-gradient-to-r from-green-500 to-teal-500 shadow-lg hover:shadow-xl',
-    incorrect: 'bg-gradient-to-r from-red-500 to-orange-500 shadow-lg hover:shadow-xl',
-    default: 'bg-gray-600 shadow-md hover:shadow-lg'
-  };
-
-  const handleClick = async () => { // Make handleClick async to await initAudio
+  const handleClick = async () => { 
     if (isInteractionEnabled) {
-      await initAudio(); // Ensure audio is initialized before starting the challenge
-      startChallenge(); // Call the startChallenge action from the store
+      await initAudio(); 
+      startChallenge(); 
       playClickSound();
-      // triggerHapticFeedback(); // This might not be needed on the start button
-      // Clear the gesture state after a successful click to prevent re-triggering
       setGesture({ type: 'idle', payload: {}, timestamp: Date.now(), sequenceId: '' });
     }
   };
@@ -42,7 +33,7 @@ const StartChallengeButton = () => {
         transition: { delay: 0.1, type: 'spring', stiffness: 400, damping: 15 }
       }}
       className={`
-        ${isInteractionEnabled ? buttonStyle[gameState] : buttonStyle.default}
+        ${isInteractionEnabled ? 'bg-gradient-to-r from-blue-500 to-purple-500 shadow-lg hover:shadow-xl' : 'bg-gray-600 shadow-md hover:shadow-lg'}
         glass-morphic 
         px-8 py-4 rounded-2xl 
         text-white font-bold 
@@ -54,10 +45,10 @@ const StartChallengeButton = () => {
       `}
       aria-label="Start Challenge"
       aria-disabled={!isInteractionEnabled}
-      // Conditionally render the button based on game state
-      hidden={gameState !== 'idle' && gameState !== 'correct' && gameState !== 'great' && gameState !== 'good' && gameState !== 'incorrect'} // Show only when idle, or after a challenge is completed/failed
+      // Hide the button unless the game is in the 'idle' state
+      hidden={gameState !== 'idle'} 
     >
-      {gameState === 'idle' ? 'Start Challenge' : 'Next Challenge'} {/* Text changes based on state */}
+      Start Challenge
     </motion.button>
   );
 };

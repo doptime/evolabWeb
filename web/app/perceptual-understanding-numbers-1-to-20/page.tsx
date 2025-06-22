@@ -7,9 +7,9 @@ import { LoadingSpinner } from './components-LoadingSpinner';
 import { lazy, Suspense } from 'react';
 import StartChallengeButton from './components-StartChallengeButton';
 import OracleScale from './components-OracleScale';
-import { GestureCaptureProvider } from '../../components/guesture/GestureCaptureProvider'; // Corrected path
-import { initAudio } from './utils-audio'; // Import initAudio
-import { useGestureHandler } from './hooks-useGestureHandler'; // Import the handler
+import { GestureCaptureProvider } from '../../components/guesture/GestureCaptureProvider';
+import { initAudio } from './utils-audio';
+import { useGestureHandler } from './hooks-useGestureHandler';
 
 export default function Index() {
   const { gameState, generateChallenge } = useGameStore();
@@ -17,20 +17,20 @@ export default function Index() {
   useEffect(() => {
     console.log('Index component mounted',"gameState:", gameState);
     // Generate a challenge when the component mounts and gameState is idle
+    // This logic is now handled more robustly within the game flow after a feedback dismissal.
+    // Keep it for initial load, but FeedbackContainer drives subsequent challenges.
     if (gameState === 'idle') {
       generateChallenge();
     }
+    // Initialize audio when the component mounts
+    initAudio();
   }, [gameState, generateChallenge]);
 
   // Initialize and activate the gesture handler
-  // The gesture handler is responsible for listening to and processing gesture events.
-  // It's crucial that this hook is called to start the gesture processing logic.
   useGestureHandler();
 
   return (
     <ErrorBoundary>
-      {/* GestureCaptureProvider should wrap the elements that capture gestures */}
-      {/* It provides the necessary context for gesture detection. */}
       <GestureCaptureProvider>
         <motion.div 
           className="relative w-full h-screen overflow-hidden"
@@ -38,8 +38,8 @@ export default function Index() {
           
           <Suspense fallback={<LoadingSpinner />}> 
             <OracleScale />
-            {/* Render StartChallengeButton only when the game is in the idle state */}
-            {gameState === 'idle' && <StartChallengeButton />} {/* Only show StartChallengeButton in 'idle' state */}
+            {/* StartChallengeButton should only appear when game is idle */}
+            {gameState === 'idle' && <StartChallengeButton />}
           </Suspense>
         </motion.div>
       </GestureCaptureProvider>

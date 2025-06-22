@@ -10,7 +10,7 @@ interface ModifierButtonProps {
 }
 
 export const ModifierButton = ({ value, operation }: ModifierButtonProps) => {
-  const { gameState, applyModifier, recordAction } = useGameStore();
+  const { gameState, applyModifier } = useGameStore(); // Removed recordAction
   const { gesture, setGesture } = useGestureStore(); // Import setGesture to clear gesture after click
   
   // Check if the button is currently targeted by a gesture
@@ -23,7 +23,7 @@ export const ModifierButton = ({ value, operation }: ModifierButtonProps) => {
     if (isActive) {
       applyModifier(value, operation);
       playDing(); // Play a sound effect for modifier actions
-      recordAction({ type: operation, value }); // Record the action for undo/redo
+      // recordAction({ type: operation, value }); // Removed recordAction call
       // Clear the gesture state after a successful click to prevent re-triggering
       setGesture({ type: 'idle', payload: {}, timestamp: Date.now(), sequenceId: '' });
     }
