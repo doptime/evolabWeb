@@ -117,13 +117,12 @@ export default function OracleScale() {
             {isNumericChallenge ? (
               <motion.group
                 position={[leftTrayOffsetX, BALL_START_Y + 0.5, 0]} // Position slightly above the tray
-                animate={{ scale: 1.5, y: BALL_START_Y + 1 }} // Animation for emphasis
-                transition={{ type: 'spring', stiffness: 100, damping: 15 }}
+                // No animation for now, just static display
               >
                 <Text
                   position={[0, 0, 0]} // Position relative to group
-                  fontSize={1.5}
-                  color="white"
+                  fontSize={2.5} // Increased font size for better visibility
+                  color="black" // Set color to black for contrast against a light background
                   anchorX="center"
                   anchorY="middle"
                 >
@@ -133,13 +132,13 @@ export default function OracleScale() {
             ) : (
               // Render energy balls for non-numeric challenge or if challengeValue is zero
               (challengeValue > 0 ? challengeBallPositions : []).map((pos, i) => (
-                <EnergyBall key={`ch-ball-${i}`} id={`ch-ball-${i}`} initialPosition={pos} trayWidth={TRAY_WIDTH} trayDepth={TRAY_DEPTH} trayOffsetX={leftTrayOffsetX} />
+                <EnergyBall key={`ch-ball-${i}`} id={`ch-ball-${i}`} initialPosition={pos} trayWidth={TRAY_WIDTH} trayDepth={TRAY_DEPTH} trayOffsetX={leftTrayOffsetX} gameState={gameState} />
               ))
             )}
 
             {/* Workspace Balls */}
             {workspaceBallPositions.map((pos, i) => (
-              <EnergyBall key={`ws-ball-${i}`} id={`ws-ball-${i}`} initialPosition={pos} trayWidth={TRAY_WIDTH} trayDepth={TRAY_DEPTH} trayOffsetX={rightTrayOffsetX} />
+              <EnergyBall key={`ws-ball-${i}`} id={`ws-ball-${i}`} initialPosition={pos} trayWidth={TRAY_WIDTH} trayDepth={TRAY_DEPTH} trayOffsetX={rightTrayOffsetX} gameState={gameState} />
             ))}
           </Physics>
         </Canvas>

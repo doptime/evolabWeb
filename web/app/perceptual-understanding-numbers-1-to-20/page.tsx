@@ -13,9 +13,10 @@ import { useGestureHandler } from './hooks-useGestureHandler';
 
 export default function Index() {
   const { gameState, generateChallenge } = useGameStore();
-  
+
+
   useEffect(() => {
-    console.log('Index component mounted',"gameState:", gameState);
+    console.log('Index component mounted', "gameState:", gameState);
     // Generate a challenge when the component mounts and gameState is idle
     // This logic is now handled more robustly within the game flow after a feedback dismissal.
     // Keep it for initial load, but FeedbackContainer drives subsequent challenges.
@@ -32,11 +33,11 @@ export default function Index() {
   return (
     <ErrorBoundary>
       <GestureCaptureProvider>
-        <motion.div 
+        <motion.div
           className="relative w-full h-screen overflow-hidden"
-        > 
-          
-          <Suspense fallback={<LoadingSpinner />}> 
+        >
+
+          <Suspense fallback={<LoadingSpinner />}>
             <OracleScale />
             {/* StartChallengeButton should only appear when game is idle */}
             {gameState === 'idle' && <StartChallengeButton />}

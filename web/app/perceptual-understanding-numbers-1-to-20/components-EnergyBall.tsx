@@ -13,6 +13,7 @@ interface EnergyBallProps {
   trayWidth: number; // Add tray dimensions for boundary checks
   trayDepth: number;
   trayOffsetX: number;
+  gameState: string; // Add gameState to props for memoization
 }
 
 // Function to get a random bright color, memoized to ensure color stability
@@ -34,9 +35,9 @@ const getRandomBrightColor = () => {
   return colors[Math.floor(Math.random() * colors.length)];
 };
 
-const EnergyBall = ({ id, initialPosition, trayWidth, trayDepth, trayOffsetX }: EnergyBallProps) => {
-  const { gameState } = useGameStore();
-  const { gesture } = useGestureStore(); // Not directly used here, but kept for context if needed
+const EnergyBall = ({ id, initialPosition, trayWidth, trayDepth, trayOffsetX, gameState }: EnergyBallProps) => {
+  // The gameState prop is now passed directly, no need to use useGameStore internally here for it.
+  const { gesture } = useGestureStore(); 
   
   // Use useRef to store the random color once per component instance
   const randomColor = useRef(getRandomBrightColor()); 
@@ -133,5 +134,6 @@ export default React.memo(EnergyBall, (prevProps, nextProps) => {
          prevProps.initialPosition[2] === nextProps.initialPosition[2] &&
          prevProps.trayWidth === nextProps.trayWidth &&
          prevProps.trayDepth === nextProps.trayDepth &&
-         prevProps.trayOffsetX === nextProps.trayOffsetX;
+         prevProps.trayOffsetX === nextProps.trayOffsetX &&
+         prevProps.gameState === nextProps.gameState; // Added gameState to comparison
 });
