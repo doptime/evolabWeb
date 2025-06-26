@@ -24,7 +24,7 @@ export default function LiteracyGame() {
         if (gesture.type === 'click' && gesture.payload?.targetId) {
             const { targetId } = gesture.payload;
             if (targetId.startsWith('card-')) {
-                selectCard(targetId);
+                selectCard(targetId); // selectCard 会触发语音播报
             } else if (targetId === 'control-button') {
                 if (gameState === 'revealed') {
                     playSound("E5").then(() => {
@@ -146,9 +146,7 @@ export default function LiteracyGame() {
                     </AnimatePresence>
                 </motion.button>
             </div>
-            <div className="absolute bottom-4 right-4 text-xs text-gray-400">
-                Gesture simulation via mouse. Move to point, click to select.
-            </div>
+            {/* 移除鼠标模拟手势的提示，因为现在有实际的手势控制 */}
         </div>
     );
 }

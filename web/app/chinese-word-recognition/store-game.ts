@@ -136,7 +136,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                     // 正常速度语音结束后，再播放慢速语音
                     setTimeout(() => {
                         speak(target.word, 'zh-CN', 0.3);
-                    }, 500); // 间隔0.5秒
+                    }, 500);
                 });
             });
         }, 500);
@@ -147,10 +147,12 @@ export const useGameStore = create<GameState>((set, get) => ({
             const selectedCard = get().options.find(o => o.id === cardId);
             if(selectedCard?.isCorrect){
                 playSound("C5").then(() => {
+                    // 延迟播放语音，让音效先完成
                     setTimeout(() => speak("正确！你真棒！"), 100);
                 });
             } else {
                 playSound("C3").then(() => {
+                    // 延迟播放语音，让音效先完成
                     setTimeout(() => speak("不对哦，再试一次吧！"), 100);
                 });
             }
