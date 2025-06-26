@@ -62,10 +62,14 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         // 构建提示语，确保长度凑到60个符号左右
         const buildHint = (word: WordData) => {
+            // 确保substring操作不会超出字符串长度
+            const rootHint = word.hints.root ? `词根: ${word.hints.root.substring(0, Math.min(word.hints.root.length, 10))}...` : '';
+            const associationHint = word.hints.association ? `联想: ${word.hints.association.substring(0, Math.min(word.hints.association.length, 15))}...` : '';
+
             if (word.isNumeric) {
-                return ` ${word.hints.emoji} ${word.hints.en} ${word.hints.jp} \n数学: ${word.word}的计数单位。 \n联想: ${word.hints.association.substring(0, 15)}...`;
+                return ` ${word.hints.emoji} ${word.hints.en} ${word.hints.jp} \n数学: ${word.word}的计数单位。 \n${associationHint}`; // 使用 \n 实现换行
             } else {
-                return `${word.hints.emoji} ${word.hints.en} ${word.hints.jp} \n词根: ${word.hints.root.substring(0, 10)}... \n联想: ${word.hints.association.substring(0, 15)}...`;
+                return `${word.hints.emoji} ${word.hints.en} ${word.hints.jp} \n${rootHint} \n${associationHint}`; // 使用 \n 实现换行
             }
         };
 
@@ -88,14 +92,17 @@ export const useGameStore = create<GameState>((set, get) => ({
         while (selectedIncorrectWords.length < 2 && potentialIncorrectWords.length > 0) {
             const randomIndex = Math.floor(Math.random() * potentialIncorrectWords.length);
             const selectedWord = potentialIncorrectWords.splice(randomIndex, 1)[0];
-            if (selectedWord.word !== target.word) {
+            if (selectedWord.word !== target.word) { // 再次确认不与目标单词重复
                 selectedIncorrectWords.push(selectedWord);
             }
         }
 
-        // 如果仍然不足两个，随机从其他类型中选择，并确保word不同
+        // 如果仍然不足两个，随机从所有单词中选择不重复的，且不与已选的重复
         if (selectedIncorrectWords.length < 2) {
-             const allOtherWords = words.filter(w => w.word !== target.word && !selectedIncorrectWords.includes(w));
+             const allOtherWords = words.filter(w => 
+                w.word !== target.word && 
+                !selectedIncorrectWords.some(siw => siw.word === w.word)
+            );
              while (selectedIncorrectWords.length < 2 && allOtherWords.length > 0) {
                 const randomIndex = Math.floor(Math.random() * allOtherWords.length);
                 selectedIncorrectWords.push(allOtherWords.splice(randomIndex, 1)[0]);
@@ -127,40 +134,47 @@ export const useGameStore = create<GameState>((set, get) => ({
             gameId: get().gameId + 1,
         });
 
-        // 延迟朗读目标单词
-        // 确保先播放音效，再进行语音播报
+        // 确保先播放音效，再进行语音播报，并且语音播报之间有顺序
+        const playInitialAudio = async () => {
+            await playSound("C4");
+            await speak(target.word, 'zh-CN', 1.0); // 正常速度
+            await speak(target.word, 'zh-CN', 0.3); // 慢速
+        };
+        // 延迟一点时间开始播放，给UI渲染留出空间
         setTimeout(() => {
-            playSound("C4").then(() => {
-                // 播放正常速度语音
-                speak(target.word, 'zh-CN', 1.0).then(() => {
-                    // 正常速度语音结束后，再播放慢速语音
-                    setTimeout(() => {
-                        speak(target.word, 'zh-CN', 0.3);
-                    }, 500);
-                });
-            });
-        }, 500);
+            playInitialAudio();
+        }, 500); // 延迟0.5秒
     },
 
-    selectCard: (cardId) => {
-        if (get().gameState === 'playing') {
-            const selectedCard = get().options.find(o => o.id === cardId);
+    selectCard: async (cardId) => { // 标记为 async 函数
+        const state = get();
+        if (state.gameState === 'playing') {
+            const selectedCard = state.options.find(o => o.id === cardId);
+            let feedbackText = '';
             if(selectedCard?.isCorrect){
-                playSound("C5").then(() => {
-                    // 延迟播放语音，让音效先完成
-                    setTimeout(() => speak("正确！你真棒！"), 100);
-                });
+                await playSound("C5"); // 播放正确音效
+                feedbackText = `太棒了！正确答案就是 ${state.targetWord?.word}。`;
+                await speak(feedbackText, 'zh-CN', 1.0); // 播报正确结果
             } else {
-                playSound("C3").then(() => {
-                    // 延迟播放语音，让音效先完成
-                    setTimeout(() => speak("不对哦，再试一次吧！"), 100);
-                });
+                await playSound("C3"); // 播放错误音效
+                // 如果 targetWord 存在，则播报正确答案；否则只说“不对哦”
+                if (state.targetWord) {
+                     feedbackText = `很遗憾，你选择了 ${selectedCard?.word || '一个选项'}。正确答案是 ${state.targetWord.word}。`;
+                } else {
+                     feedbackText = `不对哦，再试一次吧！`;
+                }
+                await speak(feedbackText, 'zh-CN', 1.0); // 播报错误结果
             }
             set({ selectedCardId: cardId, gameState: 'revealed' });
         }
     },
 
     nextGame: () => {
-        get().initializeGame(wordDatabase);
+        // 重置状态到初始，然后重新初始化游戏
+        set({
+            selectedCardId: null,
+            gameState: 'playing',
+        });
+        get().initializeGame(wordDatabase); // 使用 wordDatabase 来初始化游戏
     }
 }));

@@ -12,65 +12,52 @@ import { useGameStore } from './store-game'; // 导入分离后的游戏状态St
 
 // --- MAIN APP COMPONENT ---
 export default function LiteracyGame() {
-    const { gameId, options, selectedCardId, gameState, initializeGame, selectCard, nextGame, targetWord } = useGameStore();
-    const gesture = useGestureStore((state) => state.gesture);
+    const { gameId, options, selectedCardId, gameState, initializeGame, selectCard, targetWord } = useGameStore();
+    // 优化：只订阅手势的类型和payload，减少不必要的组件重新渲染
+    const gestureType = useGestureStore((state) => state.gesture.type);
+    const gesturePayload = useGestureStore((state) => state.gesture.payload);
+    const gestureTimestamp = useGestureStore((state) => state.gesture.timestamp);
+
+    // 使用一个ref来跟踪上一次处理的手势时间戳，避免重复处理
+    const lastProcessedGestureTimestamp = React.useRef(0);
 
     useEffect(() => {
         initializeGame(wordDatabase);
     }, [initializeGame]);
 
-    // Listen to gesture changes
+    // 只用useEffect处理卡片点击手势
     useEffect(() => {
-        if (gesture.type === 'click' && gesture.payload?.targetId) {
-            const { targetId } = gesture.payload;
-            if (targetId.startsWith('card-')) {
-                selectCard(targetId); // selectCard 会触发语音播报
-            } else if (targetId === 'control-button') {
-                if (gameState === 'revealed') {
-                    playSound("E5").then(() => {
-                        nextGame();
-                    });
-                } else {
-                    // 直接使用从 Zustand 获取的 targetWord
-                    if (targetWord) {
-                        playSound("A4").then(() => {
-                            speak(targetWord.word, 'zh-CN', 1.0).then(() => {
-                                setTimeout(() => {
-                                    speak(targetWord.word, 'zh-CN', 0.3);
-                                }, 500); // 间隔0.5秒
-                            });
-                        });
-                    }
-                }
+        if (gestureTimestamp === lastProcessedGestureTimestamp.current) {
+            return;
+        }
+
+        if (gestureType === 'click' && gesturePayload?.targetId) {
+            const { targetId } = gesturePayload;
+            if (targetId.startsWith('card-') && gameState === 'playing') {
+                selectCard(targetId);
+                lastProcessedGestureTimestamp.current = gestureTimestamp;
             }
         }
-    }, [gesture, selectCard, nextGame, gameState, targetWord]); // 添加 targetWord 到依赖数组
+    }, [gestureType, gesturePayload, gestureTimestamp, selectCard, gameState]);
 
     const isRevealed = gameState === 'revealed';
 
-    const handleControlButtonClick = () => {
+    // 将按钮点击逻辑（手势或鼠标）统一到onClick处理器
+    const handleControlButtonClick = async () => {
         if (isRevealed) {
-            playSound("E5").then(() => {
-                nextGame();
-            });
+            useGameStore.getState().nextGame();
         } else {
-            // 直接使用从 Zustand 获取的 targetWord
             if (targetWord) {
-                playSound("A4").then(() => {
-                    speak(targetWord.word, 'zh-CN', 1.0).then(() => {
-                        setTimeout(() => {
-                            speak(targetWord.word, 'zh-CN', 0.3);
-                        }, 500); // 间隔0.5秒
-                    });
-                });
+                await playSound("A4");
+                await speak(targetWord.word, 'zh-CN', 1.0);
+                await speak(targetWord.word, 'zh-CN', 0.3);
             }
         }
-    }
+    };
 
     return (
         <div
             className="w-full min-h-screen bg-gray-50 flex flex-col items-center justify-center font-sans relative overflow-hidden"
-            // 移除鼠标模拟手势的逻辑，手势输入由 GestureCaptureProvider 统一管理
         >
             <GestureCursor />
 
@@ -100,10 +87,10 @@ export default function LiteracyGame() {
                         >
                             <GameCard
                                 option={option}
-                                onSelect={selectCard}
+                                onSelect={selectCard} 
                                 isSelected={selectedCardId === option.id}
                                 isRevealed={isRevealed}
-                            />
+                             />
                         </motion.div>
                     ))}
                 </AnimatePresence>
@@ -112,13 +99,13 @@ export default function LiteracyGame() {
             <div className="mt-12">
                 <motion.button
                     id="control-button"
+                    onClick={handleControlButtonClick} // 添加onClick处理器
                     key={isRevealed ? 'next' : 'speak'}
                     initial={{ opacity: 0, scale: 0.8 }}
                     animate={{ opacity: 1, scale: 1 }}
                     whileHover={{ scale: 1.05 }}
                     whileTap={{ scale: 0.95 }}
                     className={`flex items-center justify-center px-8 py-4 rounded-full text-white font-bold shadow-lg focus:outline-none ${isRevealed ? 'bg-blue-500 hover:bg-blue-600' : 'bg-teal-500 hover:bg-teal-600'}`}
-                    onClick={handleControlButtonClick}
                 >
                     <AnimatePresence mode="wait">
                         {isRevealed ? (
@@ -146,7 +133,6 @@ export default function LiteracyGame() {
                     </AnimatePresence>
                 </motion.button>
             </div>
-            {/* 移除鼠标模拟手势的提示，因为现在有实际的手势控制 */}
         </div>
     );
 }

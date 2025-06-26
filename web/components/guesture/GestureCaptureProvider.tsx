@@ -3,7 +3,7 @@
 
 import { useEffect, useRef, useState, ReactNode } from 'react'; // Import ReactNode
 import { gestureService } from './gestureService';
-import { gestureProcessor } from './gestureProcessor';
+import { gestureProcessor } from './gestureProcessor'; // Corrected import
 import { useGestureStore } from './gestureStore';
 import { Gesture } from './types';
 
@@ -30,41 +30,46 @@ export const GestureCaptureProvider = ({
   const videoRef = useRef<HTMLVideoElement>(null);
   const animationFrameId = useRef<number>();
   const setGesture = useGestureStore((state) => state.setGesture); 
-  const currentGesture = useGestureStore((state) => state.gesture); // 获取当前手势状态
   const [isReady, setIsReady] = useState(false);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
-  // Initialize service and camera regardless of children presence
   useEffect(() => {
     async function setupCameraAndService() {
-      // Initialize gesture service (using placeholder)
-      await gestureService.initialize();
+      try {
+        await gestureService.initialize();
+        console.log("Gesture service initialized.");
 
-      // Attempt to access the webcam
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
           const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
           if (videoRef.current) {
             videoRef.current.srcObject = stream;
-            videoRef.current.onloadedmetadata = () => { // Use onloadedmetadata for better reliability
+            videoRef.current.onloadedmetadata = () => {
               if (videoRef.current) {
-                videoRef.current.play().catch(e => console.error("Error playing video:", e));
+                videoRef.current.play().catch(e => {
+                  console.error("Error playing video:", e);
+                  setCameraError("无法播放视频流，请检查摄像头权限。");
+                });
                 setIsReady(true);
-                console.log("Camera stream loaded and ready, starting prediction loop.");
+                console.log("Camera stream loaded and ready.");
               }
             };
+          } else {
+             setCameraError("视频元素未准备好。");
           }
-        } catch (error) {
-          console.error("Error accessing webcam:", error);
-          setIsReady(true); // Treat as ready if no media devices are available
+        } else {
+            console.warn("getUserMedia not supported in this browser.");
+            setCameraError("您的浏览器不支持摄像头访问。");
         }
-      } else {
-        console.warn("getUserMedia not supported in this browser.");
-        setIsReady(true); // Treat as ready if no media devices are available
+      } catch (error: any) {
+        console.error("Error during setup:", error);
+        const errorMessage = error.name === 'NotAllowedError' 
+          ? '摄像头权限被拒绝。请在浏览器设置中允许访问。' 
+          : `设置失败: ${error.message || '未知错误'}`;
+        setCameraError(errorMessage);
       }
     }
     setupCameraAndService();
 
-    // Cleanup function: stop camera tracks and cancel animation frame
     return () => {
       if (animationFrameId.current) {
         cancelAnimationFrame(animationFrameId.current);
@@ -73,97 +78,105 @@ export const GestureCaptureProvider = ({
       stream?.getTracks().forEach(track => track.stop());
       console.log("Cleanup: Camera tracks stopped and prediction loop canceled.");
     };
-  }, []); // Empty dependency array means this effect runs once on mount
+  }, []);
 
-  // Start the prediction loop once the video is ready
   useEffect(() => {
+    if (!isReady) {
+      return;
+    }
+
+    let lastProcessedGesture: Gesture | null = null;
+    
     const predictGesture = () => {
-      // Ensure video element exists, is not paused, and is not ended
-      if (!videoRef.current || videoRef.current.paused || videoRef.current.ended) {
+      if (!videoRef.current || videoRef.current.paused || videoRef.current.ended || videoRef.current.readyState < 3) {
         animationFrameId.current = requestAnimationFrame(predictGesture);
         return;
       }
 
       const startTimeMs = performance.now();
-      // Perform gesture detection using the video feed
-      const processedGesture = gestureProcessor.process(gestureService.detect(videoRef.current, startTimeMs));
-
-      if (processedGesture) {
-        let finalGesture: Gesture = processedGesture; // Default to processed gesture
-
-        // For click, dragstart, dragend, we need to determine the targetId
-        if (processedGesture.type === 'click' || processedGesture.type === 'dragstart') {
-          const { x, y } = processedGesture.payload; // Normalized coordinates
-          // Convert normalized coordinates to screen coordinates
-          const screenX = x * window.innerWidth;
-          const screenY = y * window.innerHeight;
-          const targetElement = document.elementFromPoint(screenX, screenY);
-          const targetId = targetElement?.id || null; // Get the ID of the element under the cursor
-          
-          // Create a new gesture object with targetId
-          finalGesture = { ...processedGesture, payload: { ...processedGesture.payload, targetId } };
-        } else if (processedGesture.type === 'point' || processedGesture.type === 'drag' || processedGesture.type === 'dragend') {
-          // For point, drag, dragend, we don't need targetId initially, but we can ensure payload has x, y
-          // No change needed for payload structure for these types from gestureProcessor
-        }
-
-        // Only update Zustand store if finalGesture is significantly different from currentGesture
-        // This prevents excessive re-renders due to minor coordinate changes in 'point' or 'drag'
-        if (!areGesturesDeepEqual(currentGesture, finalGesture)) {
-            setGesture(finalGesture);
-        }
+      let detectionResult = null;
+      try {
+        detectionResult = gestureService.detect(videoRef.current, startTimeMs);
+      } catch (e) {
+        console.warn("Gesture detection skipped due to service not ready or error:", e);
+        animationFrameId.current = requestAnimationFrame(predictGesture);
+        return;
       }
 
-      // Continue the prediction loop
+      let finalGesture: Gesture | null = null;
+      if (detectionResult && detectionResult.landmarks && detectionResult.landmarks.length > 0) {
+        const processedGesture = gestureProcessor.process(detectionResult); 
+        if (processedGesture) {
+          if ((processedGesture.type === 'click' || processedGesture.type === 'dragstart') && 'x' in processedGesture.payload && 'y' in processedGesture.payload) {
+            const { x, y } = processedGesture.payload;
+            const screenX = (1 - x) * window.innerWidth; 
+            const screenY = y * window.innerHeight;
+            const targetElement = document.elementFromPoint(screenX, screenY);
+            const targetId = targetElement?.id || null;
+            finalGesture = { ...processedGesture, payload: { ...processedGesture.payload, targetId } };
+          } else {
+            finalGesture = processedGesture;
+          }
+        }
+      } else {
+        finalGesture = { type: 'idle', payload: null, timestamp: startTimeMs };
+      }
+      
+      if (finalGesture && !areGesturesDeepEqual(lastProcessedGesture, finalGesture)) {
+          setGesture(finalGesture);
+          lastProcessedGesture = finalGesture;
+      }
+
       animationFrameId.current = requestAnimationFrame(predictGesture);
     };
-
-    // Helper to compare gestures for equality (ignoring timestamp)
-    const areGesturesDeepEqual = (g1: Gesture, g2: Gesture): boolean => {
+    
+    const areGesturesDeepEqual = (g1: Gesture | null, g2: Gesture | null): boolean => {
+      if (!g1 || !g2) return g1 === g2;
       if (g1.type !== g2.type) return false;
 
-      // Compare payloads based on type
+      const tolerance = 0.008;
+
       switch (g1.type) {
         case 'point':
         case 'dragend':
-          // For point and dragend, compare coordinates with a tolerance
-          const pointTolerance = 0.005; // Adjust as needed
-          return Math.abs(g1.payload.x - g2.payload.x) < pointTolerance && 
-                 Math.abs(g1.payload.y - g2.payload.y) < pointTolerance;
+            return g1.payload && g2.payload &&
+                   Math.abs(g1.payload.x - (g2.payload as any).x) < tolerance && 
+                   Math.abs(g1.payload.y - (g2.payload as any).y) < tolerance;
         case 'click':
         case 'dragstart':
-          // For click and dragstart, targetId is important, but if it's null, compare coordinates
-          if (g1.payload.targetId && g2.payload.targetId) {
-              return g1.payload.targetId === g2.payload.targetId;
-          } else {
-              // Fallback to coordinate comparison if targetId is null for both (e.g., background click)
-              const clickTolerance = 0.005;
-              return Math.abs(g1.payload.x - g2.payload.x) < clickTolerance && 
-                     Math.abs(g1.payload.y - g2.payload.y) < clickTolerance;
-          }
+            return g1.payload.targetId === (g2.payload as any).targetId;
         case 'drag':
-            // For drag, compare dx, dy with a tolerance
-            const dragTolerance = 0.01; // Adjust as needed
-            return Math.abs(g1.payload.dx - g2.payload.dx) < dragTolerance && 
-                   Math.abs(g1.payload.dy - g2.payload.dy) < dragTolerance;
+            return g1.payload && g2.payload &&
+                   Math.abs(g1.payload.x - (g2.payload as any).x) < tolerance && 
+                   Math.abs(g1.payload.y - (g2.payload as any).y) < tolerance;
         case 'idle':
           return true; 
         default:
-          return true; 
+          return JSON.stringify(g1.payload) === JSON.stringify(g2.payload);
       }
     };
 
-    // Only start prediction if the camera is ready
-    if (isReady) {
-      console.log("Starting gesture prediction loop...");
-      predictGesture();
-    }
+    console.log("Starting gesture prediction loop...");
+    animationFrameId.current = requestAnimationFrame(predictGesture);
 
-  }, [isReady, setGesture, currentGesture]); // Added currentGesture to dependencies
+    return () => {
+      if (animationFrameId.current) {
+          cancelAnimationFrame(animationFrameId.current);
+      }
+    };
+  }, [isReady, setGesture]);
 
   return (
     <>
       {children && children} {/* Render children if provided */}
+
+      {cameraError && (
+        <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-red-600 text-white p-4 rounded-lg shadow-lg z-[10000]">
+          <p className="font-bold">摄像头错误:</p>
+          <p>{cameraError}</p>
+          <p className="text-sm mt-2">请检查浏览器权限或设备连接。</p>
+        </div>
+      )}
 
       {/* The video element for displaying the camera feed and gesture detection */}
       <video

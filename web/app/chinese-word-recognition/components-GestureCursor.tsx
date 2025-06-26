@@ -6,26 +6,34 @@ import { useGestureStore } from '../../components/guesture/gestureStore';
 
 const GestureCursor = () => {
     // Select specific parts of the gesture state to avoid re-renders for unrelated changes
-    const gestureType = useGestureStore((state) => state.gesture.type);
-    const gesturePayload = useGestureStore((state) => state.gesture.payload);
+    const gesture = useGestureStore((state) => state.gesture);
+    const { type: gestureType, payload: gesturePayload, timestamp: gestureTimestamp } = gesture;
+    
     const [position, setPosition] = useState({ x: -100, y: -100 }); // 初始化为屏幕外，避免初始闪烁
     const [isActive, setIsActive] = useState(false);
     const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null); // 使用 useRef 存储定时器ID
 
+    // 追踪上一次光标更新的时间戳或手势对象，防止过度渲染
+    const lastRenderedPosition = useRef({ x: -100, y: -100 });
+    const positionTolerance = 2; // 像素容忍度，减少微小抖动引起的更新
+
     useEffect(() => {
-        // Update cursor position only if it's a 'point' gesture and coordinates are valid
-        if (gestureType === 'point' && gesturePayload && 'x' in gesturePayload && 'y' in gesturePayload) {
-            // 将归一化坐标转换为屏幕像素坐标
-            const screenX = gesturePayload.x * window.innerWidth;
+        // 更新光标位置和状态的逻辑
+        if (gesturePayload && 'x' in gesturePayload && 'y' in gesturePayload) {
+            // 将归一化坐标转换为屏幕像素坐标，并镜像X坐标以匹配镜像的视频流
+            const screenX = (1 - gesturePayload.x) * window.innerWidth;
             const screenY = gesturePayload.y * window.innerHeight;
 
             // 只有当位置显著改变时才更新状态，避免微小抖动引起的频繁渲染
-            const tolerance = 2; // 像素容忍度
-            if (Math.abs(position.x - screenX) > tolerance || Math.abs(position.y - screenY) > tolerance) {
+            if (Math.abs(lastRenderedPosition.current.x - screenX) > positionTolerance || 
+                Math.abs(lastRenderedPosition.current.y - screenY) > positionTolerance) {
                 setPosition({ x: screenX, y: screenY });
+                lastRenderedPosition.current = { x: screenX, y: screenY };
             }
-            setIsActive(false); // Pointing state is not 'active' in the sense of click/drag
+        }
 
+        if (gestureType === 'point') {
+            setIsActive(false); // Pointing state is not 'active' in the sense of click/drag
         } else if (gestureType === 'click' || gestureType === 'dragstart') {
             // Clear previous timer to prevent issues with rapid consecutive clicks
             if (clickTimeoutRef.current) {
@@ -39,11 +47,6 @@ const GestureCursor = () => {
             }, 200);
         } else if (gestureType === 'drag') {
             // 对于拖拽，光标应持续活跃
-            if (gesturePayload && 'x' in gesturePayload && 'y' in gesturePayload) {
-                const screenX = gesturePayload.x * window.innerWidth;
-                const screenY = gesturePayload.y * window.innerHeight;
-                setPosition({ x: screenX, y: screenY });
-            }
             setIsActive(true);
             // 清除任何可能的点击定时器，因为现在是拖拽
             if (clickTimeoutRef.current) {
@@ -57,7 +60,7 @@ const GestureCursor = () => {
                 clickTimeoutRef.current = null;
             }
         }
-    }, [gestureType, gesturePayload]); // 依赖于整个 payload 对象，但内部逻辑会判断具体属性是否变化
+    }, [gestureType, gesturePayload, gestureTimestamp]); // 依赖于手势类型、payload和时间戳
 
     return (
         <motion.div
@@ -72,6 +75,6 @@ const GestureCursor = () => {
             transition={{ type: 'spring', stiffness: 500, damping: 30 }}
         />
     );
-};
+}; 
 
 export default GestureCursor;

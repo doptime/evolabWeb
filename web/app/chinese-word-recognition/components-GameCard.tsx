@@ -16,7 +16,7 @@ interface CardOption {
 
 interface GameCardProps {
     option: CardOption;
-    onSelect: (id: string) => void;
+    onSelect: (id: string) => void; // 尽管这里不再直接使用，但为了接口兼容性保留
     isSelected: boolean;
     isRevealed: boolean;
 }
@@ -26,11 +26,12 @@ const GameCard: React.FC<GameCardProps> = ({ option, onSelect, isSelected, isRev
     // isSelected 决定卡片是否被选中，这会影响其放大和二次翻转状态
     const isCurrentlySelected = isSelected && isRevealed; // 只有当卡片被选中且游戏状态为revealed时，才进行二次翻转和放大
 
-    const handleCardClick = () => {
-        if (!isRevealed) { // 只有在未揭示状态下才能点击选择
-            onSelect(option.id);
-        }
-    };
+    // 移除 handleCardClick 和 onClick 事件，交互将由父组件通过手势系统管理
+    // const handleCardClick = () => {
+    //     if (!isRevealed) { // 只有在未揭示状态下才能点击选择
+    //         onSelect(option.id);
+    //     }
+    // };
 
     return (
         <div className="w-64 h-80 perspective-1000">
@@ -39,13 +40,13 @@ const GameCard: React.FC<GameCardProps> = ({ option, onSelect, isSelected, isRev
                 className={`relative w-full h-full text-center transition-transform duration-700 transform-style-3d 
                            ${isCurrentlySelected ? 'z-10' : ''}`} // 确保选中卡片在最上层
                 animate={{
-                    rotateY: isCurrentlySelected ? 360 : (isRevealed && option.isCorrect) ? 180 : 0, // 正确答案卡片翻转180度，选中卡片翻转360度
+                    rotateY: isRevealed && option.isCorrect ? (isCurrentlySelected ? 360 : 180) : 0, // 正确答案卡片翻转180度，选中卡片翻转360度
                     scale: isCurrentlySelected ? 1.2 : 1, // 选中卡片放大
                     x: isCurrentlySelected ? 0 : 0, // 确保放大时不会偏移
                     y: isCurrentlySelected ? -20 : 0 // 略微上浮
                 }}
                 transition={{ duration: 0.7, ease: "easeInOut" }}
-                onClick={handleCardClick}
+                // 移除 onClick={handleCardClick}，交由 LiteracyGamePage 处理手势点击
             >
                 {/* Card Front */}
                 <div className="absolute top-0 left-0 w-full h-full p-4 backface-hidden rounded-2xl shadow-xl bg-white border border-gray-200 flex flex-col items-center justify-center cursor-pointer">
@@ -68,6 +69,6 @@ const GameCard: React.FC<GameCardProps> = ({ option, onSelect, isSelected, isRev
             </motion.div>
         </div>
     );
-};
+}; 
 
 export default GameCard;
