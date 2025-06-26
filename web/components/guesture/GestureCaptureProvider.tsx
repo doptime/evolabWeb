@@ -107,7 +107,8 @@ export const GestureCaptureProvider = ({
       if (detectionResult && detectionResult.landmarks && detectionResult.landmarks.length > 0) {
         const processedGesture = gestureProcessor.process(detectionResult); 
         if (processedGesture) {
-          if ((processedGesture.type === 'click' || processedGesture.type === 'dragstart') && 'x' in processedGesture.payload && 'y' in processedGesture.payload) {
+          // Add targetId for both click and dragstart events
+          if ((processedGesture.type === 'click' || processedGesture.type === 'dragstart') && processedGesture.payload && 'x' in processedGesture.payload && 'y' in processedGesture.payload) {
             const { x, y } = processedGesture.payload;
             const screenX = (1 - x) * window.innerWidth; 
             const screenY = y * window.innerHeight;

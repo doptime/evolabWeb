@@ -83,7 +83,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         };
 
         // 筛选出与目标单词不同且类型（数字/非数字）匹配的单词作为错误选项
-        const potentialIncorrectWords = words.filter(w => 
+        const potentialIncorrectWords = words.filter(w =>
             w.word !== target.word && w.isNumeric === target.isNumeric
         );
 
@@ -99,14 +99,14 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         // 如果仍然不足两个，随机从所有单词中选择不重复的，且不与已选的重复
         if (selectedIncorrectWords.length < 2) {
-             const allOtherWords = words.filter(w => 
-                w.word !== target.word && 
+            const allOtherWords = words.filter(w =>
+                w.word !== target.word &&
                 !selectedIncorrectWords.some(siw => siw.word === w.word)
             );
-             while (selectedIncorrectWords.length < 2 && allOtherWords.length > 0) {
+            while (selectedIncorrectWords.length < 2 && allOtherWords.length > 0) {
                 const randomIndex = Math.floor(Math.random() * allOtherWords.length);
                 selectedIncorrectWords.push(allOtherWords.splice(randomIndex, 1)[0]);
-             }
+            }
         }
 
 
@@ -118,12 +118,12 @@ export const useGameStore = create<GameState>((set, get) => ({
             isNumeric: wordData.isNumeric,
             svg: wordData.hints.svg,
         }));
-        
+
         const allOptions = [correctOption, ...incorrectOptions.slice(0, 2)];
-        
+
         const shuffledOptions = allOptions
             .map((value) => ({ value, sort: Math.random() }))
-            .sort((a, b) => a.sort - b.sort)           
+            .sort((a, b) => a.sort - b.sort)
             .map(({ value }, i) => ({ ...value, id: `card-${i}` })); // Assign new IDs after shuffling
 
         set({
@@ -145,13 +145,22 @@ export const useGameStore = create<GameState>((set, get) => ({
             playInitialAudio();
         }, 500); // 延迟0.5秒
     },
-
     selectCard: async (cardId) => { // 标记为 async 函数
         const state = get();
+        // Allow selection/feedback even if revealed, to repeat the audio feedback
+        if (state.gameState === 'revealed') {
+            const selectedCard = state.options.find(o => o.id === cardId);
+            const feedbackText = selectedCard?.isCorrect
+                ? `正确！这就是 ${state.targetWord?.word}。`
+                : `这是 ${selectedCard?.word}。正确答案是 ${state.targetWord?.word}。`;
+            await speak(feedbackText, 'zh-CN', 1.0);
+            return; // Do not change state, just give feedback
+        }
+
         if (state.gameState === 'playing') {
             const selectedCard = state.options.find(o => o.id === cardId);
             let feedbackText = '';
-            if(selectedCard?.isCorrect){
+            if (selectedCard?.isCorrect) {
                 await playSound("C5"); // 播放正确音效
                 feedbackText = `太棒了！正确答案就是 ${state.targetWord?.word}。`;
                 await speak(feedbackText, 'zh-CN', 1.0); // 播报正确结果
@@ -159,9 +168,9 @@ export const useGameStore = create<GameState>((set, get) => ({
                 await playSound("C3"); // 播放错误音效
                 // 如果 targetWord 存在，则播报正确答案；否则只说“不对哦”
                 if (state.targetWord) {
-                     feedbackText = `很遗憾，你选择了 ${selectedCard?.word || '一个选项'}。正确答案是 ${state.targetWord.word}。`;
+                    feedbackText = `很遗憾，你选择了 ${selectedCard?.word || '一个选项'}。正确答案是 ${state.targetWord.word}。`;
                 } else {
-                     feedbackText = `不对哦，再试一次吧！`;
+                    feedbackText = `不对哦，再试一次吧！`;
                 }
                 await speak(feedbackText, 'zh-CN', 1.0); // 播报错误结果
             }

@@ -68,27 +68,24 @@ export const speak = (text: string, lang = 'zh-CN', rate = 1.0): Promise<void> =
     });
 };
 
+
 export const playSound = (note: string): Promise<void> => {
     return new Promise(async (resolve) => {
-        // 确保Tone.js已初始化
-        await ensureAudioContextStarted(); // 确保AudioContext已启动
+        await ensureAudioContextStarted(); 
 
-        const synth = new Tone.Synth().toDestination(); // Synth is connected to destination here
+        const synth = new Tone.Synth().toDestination();
         
-        // Play the note.
+        const noteDurationSeconds = Tone.Time("8n").toSeconds();
         synth.triggerAttackRelease(note, "8n"); 
 
-        // Schedule the dispose and promise resolution after the note duration.
-        // Tone.Transport.now() gets the current time on the transport timeline.
-        // Adding the duration ensures the dispose happens after the note finishes.
-        Tone.Transport.scheduleOnce(() => {
-            synth.dispose(); // Release synthesizer resources
+        // Resolve the promise after the note's duration.
+        // This is more robust than using Tone.Transport for simple one-shot sounds.
+        setTimeout(() => {
+            // Disposing the synth is good practice for memory management.
+            if (synth && !synth.disposed) {
+                synth.dispose();
+            }
             resolve();
-        }, Tone.Transport.now() + Tone.Time("8n").toSeconds()); 
-        
-        // Tone.Transport 会在 Tone.start() 之后自动启动，这里不再需要额外调用
-        // if (Tone.Transport.state !== 'started') {
-        //     Tone.Transport.start(); // 确保Transport正在运行，以触发scheduleOnce
-        // }
+        }, noteDurationSeconds * 1000);
     });
 };

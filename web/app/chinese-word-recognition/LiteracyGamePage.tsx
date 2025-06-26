@@ -96,7 +96,7 @@ export default function LiteracyGame() {
                 </AnimatePresence>
             </div>
 
-            <div className="mt-12">
+            <div className="mt-12 relative z-[10000]">
                 <motion.button
                     id="control-button"
                     onClick={handleControlButtonClick} // 添加onClick处理器
