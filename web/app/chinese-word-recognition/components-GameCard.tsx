@@ -3,7 +3,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import NumberSVG from './components-NumberSVG';
-import { playSound } from './utils-audio'; // 导入分离后的音频工具
 
 interface CardOption {
     id: string;
@@ -17,8 +16,8 @@ interface CardOption {
 interface GameCardProps {
     option: CardOption;
     onSelect: (id: string) => void; // 尽管这里不再直接使用，但为了接口兼容性保留
-    isSelected: boolean;
-    isRevealed: boolean;
+    isSelected: boolean; // 表示此卡片是否是用户选中的卡片
+    isRevealed: boolean; // 表示游戏是否进入揭示阶段
 }
 
 const GameCard: React.FC<GameCardProps> = ({ option, onSelect, isSelected, isRevealed }) => {
@@ -26,27 +25,25 @@ const GameCard: React.FC<GameCardProps> = ({ option, onSelect, isSelected, isRev
     // isSelected 决定卡片是否被选中，这会影响其放大和二次翻转状态
     const isCurrentlySelected = isSelected && isRevealed; // 只有当卡片被选中且游戏状态为revealed时，才进行二次翻转和放大
 
-    // 移除 handleCardClick 和 onClick 事件，交互将由父组件通过手势系统管理
-    // const handleCardClick = () => {
-    //     if (!isRevealed) { // 只有在未揭示状态下才能点击选择
-    //         onSelect(option.id);
-    //     }
-    // };
-
     return (
         <div className="w-64 h-80 perspective-1000">
             <motion.div
-                id={option.id}
+                id={option.id} // 确保ID存在，以便手势系统可以识别
                 className={`relative w-full h-full text-center transition-transform duration-700 transform-style-3d 
-                           ${isCurrentlySelected ? 'z-10' : ''}`} // 确保选中卡片在最上层
+                           ${isCurrentlySelected ? 'z-20' : ''}`} // 选中卡片提高z-index
                 animate={{
-                    rotateY: isRevealed && option.isCorrect ? (isCurrentlySelected ? 360 : 180) : 0, // 正确答案卡片翻转180度，选中卡片翻转360度
-                    scale: isCurrentlySelected ? 1.2 : 1, // 选中卡片放大
-                    x: isCurrentlySelected ? 0 : 0, // 确保放大时不会偏移
-                    y: isCurrentlySelected ? -20 : 0 // 略微上浮
+                    // 如果游戏已揭示:
+                    //   如果此卡片是正确答案: 
+                    //     如果同时是用户选中的卡片，则翻转360度（二次翻转）
+                    //     否则，翻转180度
+                    //   如果此卡片是错误答案: 翻转180度
+                    // 如果游戏未揭示: 翻转0度
+                    rotateY: isRevealed ? (option.isCorrect ? (isCurrentlySelected ? 360 : 180) : 180) : 0,
+                    scale: isCurrentlySelected ? 1.2 : 1,
+                    x: isCurrentlySelected ? 0 : 0,
+                    y: isCurrentlySelected ? -20 : 0
                 }}
                 transition={{ duration: 0.7, ease: "easeInOut" }}
-                // 移除 onClick={handleCardClick}，交由 LiteracyGamePage 处理手势点击
             >
                 {/* Card Front */}
                 <div className="absolute top-0 left-0 w-full h-full p-4 backface-hidden rounded-2xl shadow-xl bg-white border border-gray-200 flex flex-col items-center justify-center cursor-pointer">
@@ -57,7 +54,8 @@ const GameCard: React.FC<GameCardProps> = ({ option, onSelect, isSelected, isRev
                             option.svg ? <option.svg className="w-24 h-24" /> : null // 确保SVG有尺寸
                         )}
                     </div>
-                    <p className="text-gray-600 text-sm mt-4 whitespace-pre-wrap text-center" style={{ lineHeight: '1.2' }}>{option.displayHint}</p>
+                    {/* 使用 dangerouslySetInnerHTML 来解析 \n 字符为换行 */}
+                    <p className="text-gray-600 text-sm mt-4 whitespace-pre-wrap text-center" style={{ lineHeight: '1.2' }} dangerouslySetInnerHTML={{ __html: option.displayHint.replace(/\n/g, '<br/>') }}></p>
                 </div>
 
                 {/* Card Back */}

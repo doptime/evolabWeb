@@ -32,26 +32,24 @@ class GestureProcessor {
     // Compare payloads based on type
     switch (g1.type) {
       case 'point':
-        return Math.abs(g1.payload.x - g2.payload.x) < this.pointTolerance && 
-               Math.abs(g1.payload.y - g2.payload.y) < this.pointTolerance;
+      case 'dragend':
+          return g1.payload && g2.payload &&
+                 Math.abs(g1.payload.x - (g2.payload as any).x) < this.pointTolerance && 
+                 Math.abs(g1.payload.y - (g2.payload as any).y) < this.pointTolerance;
       case 'click':
       case 'dragstart':
-        // 对于点击和拖拽开始，如果 targetId 相同，则认为是相同点击/拖拽。
+        // 对于 click 和 dragstart，如果 targetId 相同，则认为是相同点击/拖拽。
         // 如果 targetId 不同，或者两者都为 null 但坐标显著不同，则视为不同。
-        if (g1.payload.targetId === g2.payload.targetId) {
-            // 如果 targetId 相同，进一步比较坐标以处理无 targetId 的情况或微小差异
-            // 这里的容忍度应该与 pointTolerance 保持一致，避免因微小坐标变化而重复触发
-            return Math.abs((g1.payload as any).x - (g2.payload as any).x) < this.pointTolerance && 
-                   Math.abs((g1.payload as any).y - (g2.payload as any).y) < this.pointTolerance;
-        } else {
-            return false; // targetId 不同，直接视为不同
-        }
+        // 这里不再比较 x, y 坐标，因为 click 和 dragstart 应该基于事件触发而非连续位置。
+        // targetId 相同且类型相同即认为是相同事件，避免重复触发。
+        // 注意：targetId是在GestureCaptureProvider中根据DOM元素获取的，这里只做比较
+        return g1.payload.targetId === (g2.payload as any).targetId;
       case 'drag':
-          return Math.abs(g1.payload.x - g2.payload.x) < this.dragTolerance && 
-                 Math.abs(g1.payload.y - g2.payload.y) < this.dragTolerance;
-      case 'dragend':
-          return Math.abs(g1.payload.x - g2.payload.x) < this.pointTolerance && 
-                 Math.abs(g1.payload.y - g2.payload.y) < this.pointTolerance;
+          return g1.payload && g2.payload &&
+                 Math.abs(g1.payload.x - g2.payload.x) < this.dragTolerance && 
+                 Math.abs(g1.payload.y - g2.payload.y) < this.dragTolerance &&
+                 Math.abs(g1.payload.dx - g2.payload.dx) < this.dragTolerance &&
+                 Math.abs(g1.payload.dy - g2.payload.dy) < this.dragTolerance; // 增加 dx, dy 比较
       case 'idle':
         return true; 
       default:
@@ -106,6 +104,7 @@ class GestureProcessor {
         if (wasPinching && !this.isPinching) { // 从捏合状态变为非捏合状态 (释放)
           const duration = currentTime - this.pinchStartTime;
           if (duration < this.clickTimeout) { // 短暂捏合后释放 -> Click
+            // targetId 在 GestureCaptureProvider 中填充
             newGesture = { type: 'click', payload: { x: currentX, y: currentY, targetId: null }, timestamp: currentTime };
           } else { // 长时间捏合后释放 -> Drag End
               newGesture = { type: 'dragend', payload: { x: currentX, y: currentY }, timestamp: currentTime };
@@ -122,7 +121,13 @@ class GestureProcessor {
             // 只有当捏合持续时间超过 dragStartThreshold 时，才开始触发 'drag' 事件
             // 否则，在捏合过程中但未达到阈值时，仍然视为 'point'
             if (duration >= this.dragStartThreshold) { 
-                newGesture = { type: 'drag', payload: { x: currentX, y: currentY, dx, dy }, timestamp: currentTime };
+                // 如果当前手势是 drag，并且上一个手势不是 dragstart，则触发 dragstart
+                if (this.lastEmittedGesture?.type !== 'dragstart' && this.lastEmittedGesture?.type !== 'drag') {
+                     // targetId 在 GestureCaptureProvider 中填充
+                     newGesture = { type: 'dragstart', payload: { x: currentX, y: currentY, targetId: null }, timestamp: currentTime };
+                } else { // 否则继续触发 drag
+                    newGesture = { type: 'drag', payload: { x: currentX, y: currentY, dx, dy }, timestamp: currentTime };
+                }
             } else { 
                 newGesture = { type: 'point', payload: { x: currentX, y: currentY }, timestamp: currentTime };
             }

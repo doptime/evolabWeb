@@ -46,7 +46,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     selectedCardId: null,
     gameState: 'playing',
 
-    initializeGame: (words) => {
+    initializeGame: async (words) => { // 标记为 async
         // 50% 概率选择数字命题，50% 概率选择普通单词命题
         const numericWords = words.filter(w => w.isNumeric);
         const nonNumericWords = words.filter(w => !w.isNumeric);
@@ -74,7 +74,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         };
 
         const correctOption: CardOption = {
-            id: 'card-correct',
+            id: 'card-correct', // 使用更通用的 ID，方便后续根据索引分配新的 ID
             word: target.word,
             isCorrect: true,
             displayHint: buildHint(target),
@@ -123,7 +123,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         const shuffledOptions = allOptions
             .map((value) => ({ value, sort: Math.random() }))
-            .sort((a, b) => a.sort - b.sort)
+            .sort((a, b) => a.sort - b.sort) // 确保选项是随机顺序
             .map(({ value }, i) => ({ ...value, id: `card-${i}` })); // Assign new IDs after shuffling
 
         set({
@@ -135,47 +135,43 @@ export const useGameStore = create<GameState>((set, get) => ({
         });
 
         // 确保先播放音效，再进行语音播报，并且语音播报之间有顺序
-        const playInitialAudio = async () => {
-            await playSound("C4");
-            await speak(target.word, 'zh-CN', 1.0); // 正常速度
-            await speak(target.word, 'zh-CN', 0.3); // 慢速
-        };
-        // 延迟一点时间开始播放，给UI渲染留出空间
-        setTimeout(() => {
-            playInitialAudio();
-        }, 500); // 延迟0.5秒
+        await playSound("C4");
+        await speak(`请找出: ${target.word}`, 'zh-CN', 1.0); // 正常速度
+        await speak(target.word, 'zh-CN', 0.3); // 慢速
     },
     selectCard: async (cardId) => { // 标记为 async 函数
         const state = get();
-        // Allow selection/feedback even if revealed, to repeat the audio feedback
-        if (state.gameState === 'revealed') {
+        // 只有在 playing 状态下才允许选择卡片并改变游戏状态
+        if (state.gameState !== 'playing') {
+            // 如果已经揭示，则重复播报结果，但不改变状态
             const selectedCard = state.options.find(o => o.id === cardId);
-            const feedbackText = selectedCard?.isCorrect
-                ? `正确！这就是 ${state.targetWord?.word}。`
-                : `这是 ${selectedCard?.word}。正确答案是 ${state.targetWord?.word}。`;
-            await speak(feedbackText, 'zh-CN', 1.0);
-            return; // Do not change state, just give feedback
+            if (selectedCard) {
+                const feedbackText = selectedCard.isCorrect
+                    ? `正确！这就是 ${state.targetWord?.word}。`
+                    : `这是 ${selectedCard.word}。正确答案是 ${state.targetWord?.word}。`;
+                await speak(feedbackText, 'zh-CN', 1.0);
+            }
+            return;
         }
 
-        if (state.gameState === 'playing') {
-            const selectedCard = state.options.find(o => o.id === cardId);
-            let feedbackText = '';
-            if (selectedCard?.isCorrect) {
-                await playSound("C5"); // 播放正确音效
-                feedbackText = `太棒了！正确答案就是 ${state.targetWord?.word}。`;
-                await speak(feedbackText, 'zh-CN', 1.0); // 播报正确结果
+        const selectedCard = state.options.find(o => o.id === cardId);
+        if (!selectedCard) return; // 如果没有找到卡片，直接返回
+
+        let feedbackText = '';
+        if (selectedCard.isCorrect) {
+            await playSound("C5"); // 播放正确音效
+            feedbackText = `太棒了！正确答案就是 ${state.targetWord?.word}。`;
+            await speak(feedbackText, 'zh-CN', 1.0);
+        } else {
+            await playSound("C3"); // 播放错误音效
+            if (state.targetWord) {
+                feedbackText = `很遗憾，你选择了 ${selectedCard.word}。正确答案是 ${state.targetWord.word}。`;
             } else {
-                await playSound("C3"); // 播放错误音效
-                // 如果 targetWord 存在，则播报正确答案；否则只说“不对哦”
-                if (state.targetWord) {
-                    feedbackText = `很遗憾，你选择了 ${selectedCard?.word || '一个选项'}。正确答案是 ${state.targetWord.word}。`;
-                } else {
-                    feedbackText = `不对哦，再试一次吧！`;
-                }
-                await speak(feedbackText, 'zh-CN', 1.0); // 播报错误结果
+                feedbackText = `不对哦，再试一次吧！`;
             }
-            set({ selectedCardId: cardId, gameState: 'revealed' });
+            await speak(feedbackText, 'zh-CN', 1.0);
         }
+        set({ selectedCardId: cardId, gameState: 'revealed' });
     },
 
     nextGame: () => {

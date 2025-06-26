@@ -9,16 +9,21 @@ let isAudioContextStarted = false;
 const ensureAudioContextStarted = async () => {
     if (!isAudioContextStarted) {
         try {
-            // 只有在AudioContext状态为'suspended'时才尝试resume，避免不必要的Tone.start()
+            // 检查 Tone.context 的状态
             if (Tone.context.state === 'suspended') {
                 await Tone.context.resume();
-            } else { // 如果AudioContext未启动或已关闭，则重新启动Tone
+                console.log("Tone.js AudioContext resumed.");
+            } else if (Tone.context.state === 'closed') {
+                // 如果已关闭，则重新启动 Tone.js，这将创建新的 AudioContext
                 await Tone.start();
+                console.log("Tone.js AudioContext started from closed state.");
+            } else if (Tone.context.state === 'running') {
+                // 如果已经运行，则不需要做任何事
+                console.log("Tone.js AudioContext is already running.");
             }
             isAudioContextStarted = true;
-            console.log("Tone.js AudioContext started/resumed.");
         } catch (e) {
-            console.error("Error starting Tone.js AudioContext:", e);
+            console.error("Error starting/resuming Tone.js AudioContext:", e);
             isAudioContextStarted = false;
         }
     }
@@ -32,24 +37,19 @@ if (typeof window !== 'undefined') {
     document.documentElement.addEventListener('mousedown', ensureAudioContextStarted, { once: true, capture: true });
     document.documentElement.addEventListener('touchstart', ensureAudioContextStarted, { once: true, capture: true });
     document.documentElement.addEventListener('keydown', ensureAudioContextStarted, { once: true, capture: true });
+    document.documentElement.addEventListener('click', ensureAudioContextStarted, { once: true, capture: true });
 }
 
 export const speak = (text: string, lang = 'zh-CN', rate = 1.0): Promise<void> => {
-    return new Promise(async (resolve, reject) => {
-        // 确保Tone.js AudioContext已启动，这对于Web Speech API也很有帮助，尽管不是直接依赖
-        // Web Speech API 的启动可能不需要明确的Tone.start()，但这里确保了用户交互
-        // 已经发生，有助于克服浏览器自动播放策略。
-         await ensureAudioContextStarted(); 
+    return new Promise(async (resolve) => {
+        await ensureAudioContextStarted(); // 确保 AudioContext 已启动
 
         if (typeof window !== 'undefined' && window.speechSynthesis) {
-            // 移除 cancel() 调用，以允许语音排队
-            // if (window.speechSynthesis.speaking || window.speechSynthesis.pending) {
-            //     window.speechSynthesis.cancel();
-            // }
-
             const utterance = new SpeechSynthesisUtterance(text);
             utterance.lang = lang;
             utterance.rate = rate;
+
+            // 确保在语音开始前设置 onend 和 onerror
             utterance.onend = () => {
                 console.log(`Speech synthesis ended for: "${text}"`);
                 resolve();
@@ -59,6 +59,16 @@ export const speak = (text: string, lang = 'zh-CN', rate = 1.0): Promise<void> =
                 // 即使发生错误，也解决 Promise 以避免阻止后续流程
                 resolve();
             };
+
+            // 确保在speak之前，浏览器已经加载了对应的语言包
+            // 遍历所有可用的声音，选择一个匹配语言的声音
+            const voices = window.speechSynthesis.getVoices();
+            const voice = voices.find(v => v.lang === lang);
+            if (voice) {
+                utterance.voice = voice;
+            } else {
+                console.warn(`No voice found for language: ${lang}. Using default.`);
+            }
 
             window.speechSynthesis.speak(utterance);
         } else {
@@ -71,21 +81,22 @@ export const speak = (text: string, lang = 'zh-CN', rate = 1.0): Promise<void> =
 
 export const playSound = (note: string): Promise<void> => {
     return new Promise(async (resolve) => {
-        await ensureAudioContextStarted(); 
+        await ensureAudioContextStarted(); // 确保 AudioContext 已启动
 
         const synth = new Tone.Synth().toDestination();
         
+        // 使用 Tone.Time() 来解析音符持续时间，确保它是一个有效的数字
+        // Tone.Time("8n") 表示八分音符的时长
         const noteDurationSeconds = Tone.Time("8n").toSeconds();
         synth.triggerAttackRelease(note, "8n"); 
 
         // Resolve the promise after the note's duration.
-        // This is more robust than using Tone.Transport for simple one-shot sounds.
         setTimeout(() => {
             // Disposing the synth is good practice for memory management.
             if (synth && !synth.disposed) {
                 synth.dispose();
             }
             resolve();
-        }, noteDurationSeconds * 1000);
+        }, noteDurationSeconds * 1000 + 100); // 增加少量延迟以确保声音完全播放，并留出缓冲时间
     });
 };
