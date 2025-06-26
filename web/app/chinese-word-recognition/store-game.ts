@@ -128,12 +128,16 @@ export const useGameStore = create<GameState>((set, get) => ({
         });
 
         // 延迟朗读目标单词
+        // 确保先播放音效，再进行语音播报
         setTimeout(() => {
             playSound("C4").then(() => {
-                speak(`请找出 "${target.word}"`, 'zh-CN', 1.0);
-                setTimeout(() => {
-                    speak(`请找出 "${target.word}"`, 'zh-CN', 0.3);
-                }, 1500);
+                // 播放正常速度语音
+                speak(target.word, 'zh-CN', 1.0).then(() => {
+                    // 正常速度语音结束后，再播放慢速语音
+                    setTimeout(() => {
+                        speak(target.word, 'zh-CN', 0.3);
+                    }, 500); // 间隔0.5秒
+                });
             });
         }, 500);
     },

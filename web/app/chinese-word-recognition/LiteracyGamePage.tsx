@@ -12,9 +12,8 @@ import { useGameStore } from './store-game'; // 导入分离后的游戏状态St
 
 // --- MAIN APP COMPONENT ---
 export default function LiteracyGame() {
-    const { gameId, options, selectedCardId, gameState, initializeGame, selectCard, nextGame } = useGameStore();
+    const { gameId, options, selectedCardId, gameState, initializeGame, selectCard, nextGame, targetWord } = useGameStore();
     const gesture = useGestureStore((state) => state.gesture);
-    const setGesture = useGestureStore((state) => state.setGesture); // For simulation
 
     useEffect(() => {
         initializeGame(wordDatabase);
@@ -27,77 +26,65 @@ export default function LiteracyGame() {
             if (targetId.startsWith('card-')) {
                 selectCard(targetId);
             } else if (targetId === 'control-button') {
-                if(gameState === 'revealed') {
+                if (gameState === 'revealed') {
                     playSound("E5").then(() => {
                         nextGame();
                     });
                 } else {
-                    const targetWord = useGameStore.getState().targetWord;
-                    if(targetWord) {
+                    // 直接使用从 Zustand 获取的 targetWord
+                    if (targetWord) {
                         playSound("A4").then(() => {
-                            speak(targetWord.word, 'zh-CN', 1.0);
-                            setTimeout(() => {
-                                speak(targetWord.word, 'zh-CN', 0.3);
-                            }, 1000);
+                            speak(targetWord.word, 'zh-CN', 1.0).then(() => {
+                                setTimeout(() => {
+                                    speak(targetWord.word, 'zh-CN', 0.3);
+                                }, 500); // 间隔0.5秒
+                            });
                         });
                     }
                 }
             }
         }
-    }, [gesture, selectCard, nextGame, gameState]);
-
-    // Mouse simulation for gesture
-    const handleMouseMove = (e: React.MouseEvent) => {
-        setGesture({ type: 'point', payload: { x: e.clientX, y: e.clientY }, timestamp: Date.now()});
-    };
-    
-    const handleMouseClick = (e: React.MouseEvent<HTMLDivElement>) => {
-        const target = e.target as HTMLElement;
-        const interactiveTarget = target.closest('[id^="card-"], [id="control-button"]');
-        if (interactiveTarget) {
-            setGesture({ type: 'click', payload: { x: e.clientX, y: e.clientY, targetId: interactiveTarget.id }, timestamp: Date.now()});
-        }
-    };
+    }, [gesture, selectCard, nextGame, gameState, targetWord]); // 添加 targetWord 到依赖数组
 
     const isRevealed = gameState === 'revealed';
 
     const handleControlButtonClick = () => {
-         if (isRevealed) {
+        if (isRevealed) {
             playSound("E5").then(() => {
                 nextGame();
             });
         } else {
-            const targetWord = useGameStore.getState().targetWord;
-             if(targetWord) {
+            // 直接使用从 Zustand 获取的 targetWord
+            if (targetWord) {
                 playSound("A4").then(() => {
-                    speak(targetWord.word, 'zh-CN', 1.0);
-                    setTimeout(() => {
-                        speak(targetWord.word, 'zh-CN', 0.3);
-                    }, 1000);
+                    speak(targetWord.word, 'zh-CN', 1.0).then(() => {
+                        setTimeout(() => {
+                            speak(targetWord.word, 'zh-CN', 0.3);
+                        }, 500); // 间隔0.5秒
+                    });
                 });
             }
         }
     }
 
     return (
-        <div 
+        <div
             className="w-full min-h-screen bg-gray-50 flex flex-col items-center justify-center font-sans relative overflow-hidden"
-            onMouseMove={handleMouseMove} // Simulate 'point'
-            onClick={handleMouseClick} // Simulate 'click'
+            // 移除鼠标模拟手势的逻辑，手势输入由 GestureCaptureProvider 统一管理
         >
             <GestureCursor />
-            
+
             <div className="text-center mb-12">
                 <AnimatePresence mode="wait">
-                    <motion.h1 
+                    <motion.h1
                         key={`title-${gameId}`}
                         initial={{ y: -30, opacity: 0 }}
                         animate={{ y: 0, opacity: 1 }}
                         exit={{ y: 30, opacity: 0 }}
-                        transition={{ duration: 0.5 }} 
+                        transition={{ duration: 0.5 }}
                         className="text-4xl font-bold text-gray-800"
                     >
-                       请找出: "{useGameStore.getState().targetWord?.word}"
+                        请找出: "{targetWord?.word}"
                     </motion.h1>
                 </AnimatePresence>
             </div>
@@ -121,7 +108,7 @@ export default function LiteracyGame() {
                     ))}
                 </AnimatePresence>
             </div>
-            
+
             <div className="mt-12">
                 <motion.button
                     id="control-button"
@@ -146,7 +133,7 @@ export default function LiteracyGame() {
                                 <span>开始新游戏</span>
                             </motion.div>
                         ) : (
-                             <motion.div
+                            <motion.div
                                 key="speak-icon"
                                 initial={{ opacity: 0, y: -10 }}
                                 animate={{ opacity: 1, y: 0 }}
@@ -159,7 +146,7 @@ export default function LiteracyGame() {
                     </AnimatePresence>
                 </motion.button>
             </div>
-             <div className="absolute bottom-4 right-4 text-xs text-gray-400">
+            <div className="absolute bottom-4 right-4 text-xs text-gray-400">
                 Gesture simulation via mouse. Move to point, click to select.
             </div>
         </div>

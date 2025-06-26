@@ -5,116 +5,128 @@ import { useEffect, useRef, useState, ReactNode } from 'react'; // Import ReactN
 import { gestureService } from './gestureService';
 import { gestureProcessor } from './gestureProcessor';
 import { useGestureStore } from './gestureStore';
+import { Gesture } from './types';
 
 // Define the props for the component, including children
+
 interface GestureCaptureProviderProps {
-  children?: ReactNode; // Make children optional
+  children?: ReactNode; // Optional children to render alongside the video
+  videoWidth?: string; // CSS width property for the video (e.g., '240px', '50%')
+  videoHeight?: string; // CSS height property for the video (e.g., '180px', 'auto')
+  videoTop?: string; // CSS top position for the video (e.g., '0px', '10%')
+  videoLeft?: string; // CSS left position for the video (e.g., '0px', '20px')
+  videoOpacity?: number; // Opacity of the video (0.0 to 1.0)
 }
 
-export const GestureCaptureProvider = ({ children }: GestureCaptureProviderProps) => {
+
+export const GestureCaptureProvider = ({
+  children,
+  videoWidth = '240px', // Default width
+  videoHeight = '180px', // Default height
+  videoTop = '10px',    // Default top position
+  videoLeft = '10px',   // Default left position
+  videoOpacity = 0.8,   // Default opacity (80%)
+}: GestureCaptureProviderProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const animationFrameId = useRef<number>();
-  const setGesture = useGestureStore((state) => state.setGesture);
+  const setGesture = useGestureStore((state) => state.setGesture); 
   const [isReady, setIsReady] = useState(false);
 
-  // 步骤1：初始化服务和摄像头
+  // Initialize service and camera regardless of children presence
   useEffect(() => {
-    async function setup() {
-      // Only initialize camera if children are NOT provided
-      if (!children) {
-        await gestureService.initialize();
-        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-          try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
-            if (videoRef.current) {
-              videoRef.current.srcObject = stream;
-              videoRef.current.addEventListener('loadeddata', () => {
+    async function setupCameraAndService() {
+      // Initialize gesture service (using placeholder)
+      await gestureService.initialize();
+
+      // Attempt to access the webcam
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        try {
+          const stream = await navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 } });
+          if (videoRef.current) {
+            videoRef.current.srcObject = stream;
+            videoRef.current.onloadedmetadata = () => { // Use onloadedmetadata for better reliability
+              if (videoRef.current) {
+                videoRef.current.play().catch(e => console.error("Error playing video:", e));
                 setIsReady(true);
-                console.log("Camera ready, starting prediction loop.");
-              });
-            }
-          } catch (error) {
-            console.error("Error accessing webcam:", error);
+                console.log("Camera stream loaded and ready, starting prediction loop.");
+              }
+            };
           }
+        } catch (error) {
+          console.error("Error accessing webcam:", error);
+          setIsReady(true); // Treat as ready if no media devices are available
         }
       } else {
-        // If children are present, we don't need the camera for this component
-        setIsReady(true); // Still set isReady to true to potentially run prediction if needed by children
+        console.warn("getUserMedia not supported in this browser.");
+        setIsReady(true); // Treat as ready if no media devices are available
       }
     }
-    setup();
-    
-    // 清理函数
+    setupCameraAndService();
+
+    // Cleanup function: stop camera tracks and cancel animation frame
     return () => {
       if (animationFrameId.current) {
         cancelAnimationFrame(animationFrameId.current);
       }
-      // Only stop tracks if the video stream was active
-      if (!children) {
-        const stream = videoRef.current?.srcObject as MediaStream;
-        stream?.getTracks().forEach(track => track.stop());
-      }
-    }
-  }, [children]); // Add children to dependency array
+      const stream = videoRef.current?.srcObject as MediaStream;
+      stream?.getTracks().forEach(track => track.stop());
+      console.log("Cleanup: Camera tracks stopped and prediction loop canceled.");
+    };
+  }, []); // Empty dependency array means this effect runs once on mount
 
-  // 步骤2：启动预测循环
+  // Start the prediction loop once the video is ready
   useEffect(() => {
-    const predict = () => {
-      // Only run prediction if there are no children and video is ready
-      if (!children && (!videoRef.current || videoRef.current.paused || videoRef.current.ended)) {
-        animationFrameId.current = requestAnimationFrame(predict);
+    const predictGesture = () => {
+      // Ensure video element exists, is not paused, and is not ended
+      if (!videoRef.current || videoRef.current.paused || videoRef.current.ended) {
+        animationFrameId.current = requestAnimationFrame(predictGesture);
         return;
       }
 
-      // If children are present, prediction might be handled elsewhere or not needed here.
-      // If you still need gesture detection *when children are present*,
-      // you might need to pass the videoRef or a different element for detection.
-      // For now, assuming detection is only needed when video is displayed.
-      if (!children && videoRef.current) { 
-        const startTimeMs = performance.now();
-        const results = gestureService.detect(videoRef.current, startTimeMs);
+      const startTimeMs = performance.now();
+      // Perform gesture detection using the video feed
+      const newGesture = gestureProcessor.process(gestureService.detect(videoRef.current, startTimeMs));
 
-        if (results && results.landmarks) {
-          // 将原始数据交给处理器
-          const newGesture = gestureProcessor.process(results);
-          
-          // ⭐ 更新 Zustand Store！
-          setGesture(newGesture);
-        }
+      // Only update Zustand store if gestureProcessor returned a new, significant gesture
+      if (newGesture) {
+        setGesture(newGesture);
       }
-      
-      animationFrameId.current = requestAnimationFrame(predict);
+
+      // Continue the prediction loop
+      animationFrameId.current = requestAnimationFrame(predictGesture);
     };
 
+    // Only start prediction if the camera is ready
     if (isReady) {
-      predict();
+      console.log("Starting gesture prediction loop...");
+      predictGesture();
     }
-    
-  }, [isReady, setGesture, children]); // Add children to dependency array
+
+  }, [isReady, setGesture]); // Removed currentGesture from dependencies to prevent infinite loop
 
   return (
     <>
-      {children ? (
-        // If children are provided, render them
-        children
-      ) : (
-        // Otherwise, render the video
-        <video
-          ref={videoRef}
-          autoPlay
-          playsInline
-          style={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            width: '240px',
-            height: '180px',
-            transform: 'scaleX(-1)', // 镜像翻转，更符合直觉
-            zIndex: 9999,
-            opacity: 0.5, // 半透明
-          }}
-        />
-      )}
+      {children && children} {/* Render children if provided */}
+
+      {/* The video element for displaying the camera feed and gesture detection */}
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted // Mute the video to avoid audio feedback
+        style={{
+          position: 'fixed', // Use 'fixed' to position relative to the viewport
+          top: videoTop,
+          left: videoLeft,
+          width: videoWidth,
+          height: videoHeight,
+          transform: 'scaleX(-1)', // Mirror horizontally for a more intuitive view
+          zIndex: 9999, // Ensure the video is on top of other content
+          opacity: videoOpacity, // Control opacity via prop
+          borderRadius: '8px', // Slightly rounded corners for aesthetics
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)', // Subtle shadow
+        }}
+      />
     </>
   );
 };

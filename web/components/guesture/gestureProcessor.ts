@@ -1,5 +1,5 @@
 // src/logic/gestureProcessor.ts
-// gestureProcessor.ts: 核心算法模块。负责接收 MediaPipe 输出的原始坐标点，并根据你定义的规则，将其“翻译”成如 { type: 'click', ... } 这样的结构化手势对象。这是最需要创造力和调试的部分。
+// gestureProcessor.ts: 核心算法模块。负责接收 MediaPipe 输���的原始坐标点，并根据你定义的规则，将其“翻译”成如 { type: 'click', ... } 这样的结构化手势对象。这是最需要创造力和调试的部分。
 import { HandLandmarkerResult, NormalizedLandmark } from "@mediapipe/tasks-vision";
 import { Gesture } from './types'; // 引入你定义的 Gesture 类型
 
@@ -10,67 +10,130 @@ const getDistance = (p1: NormalizedLandmark, p2: NormalizedLandmark) => {
 
 class GestureProcessor {
   // --- 状态存储 ---
-  private lastGesture: Gesture['type'] = 'idle';
+  private lastEmittedGesture: Gesture | null = null; // Store the last emitted gesture from this processor
   private isPinching = false;
   private pinchStartTime = 0;
+  private lastIndexTip: NormalizedLandmark | null = null; // 用于计算 drag 的 dx, dy
   
   // --- 可调参数 ---
   private pinchThreshold = 0.04; // 拇指和食指捏合的距离阈值
   private clickTimeout = 200; // ms, 捏合多长时间内释放算作点击
+  private pointTolerance = 0.005; // point 手势的移动容忍度
+  private dragTolerance = 0.01; // drag 手势的移动容忍度
+
+  // Helper to compare gestures for equality (ignoring timestamp)
+  private areGesturesDeepEqual(g1: Gesture | null, g2: Gesture | null): boolean {
+    if (!g1 && !g2) return true;
+    if (!g1 || !g2) return false;
+    if (g1.type !== g2.type) return false;
+
+    // Compare payloads based on type
+    switch (g1.type) {
+      case 'point':
+        return Math.abs(g1.payload.x - g2.payload.x) < this.pointTolerance && 
+               Math.abs(g1.payload.y - g2.payload.y) < this.pointTolerance;
+      case 'click':
+      case 'dragstart':
+        return g1.payload.targetId === g2.payload.targetId;
+      case 'drag':
+          return Math.abs(g1.payload.x - g2.payload.x) < this.dragTolerance && 
+                 Math.abs(g1.payload.y - g2.payload.y) < this.dragTolerance &&
+                 g1.payload.dx === g2.payload.dx && 
+                 g1.payload.dy === g2.payload.dy;
+      case 'dragend':
+          return Math.abs(g1.payload.x - g2.payload.x) < this.pointTolerance && 
+                 Math.abs(g1.payload.y - g2.payload.y) < this.pointTolerance;
+      case 'idle':
+        return true; 
+      default:
+        return true; 
+    }
+  };
 
   // 主处理函数
-  process(result: HandLandmarkerResult): Gesture {
+  process(result: HandLandmarkerResult): Gesture | null { 
+    let newGesture: Gesture | null = null;
+
     if (result.handedness.length === 0) {
       // 没有检测到手，重置状态并返回 idle
       this.resetState();
-      return { type: 'idle', payload: null, timestamp: Date.now() };
-    }
+      newGesture = { type: 'idle', payload: null, timestamp: Date.now() };
+    } else {
+      // 我们只处理检测到的第一只手
+      const landmarks = result.landmarks[0];
+      const thumbTip = landmarks[4];
+      const indexTip = landmarks[8];
+      const distance = getDistance(thumbTip, indexTip);
+      
+      const wasPinching = this.isPinching;
+      this.isPinching = distance < this.pinchThreshold;
 
-    // 我们只处理检测到的第一只手
-    const landmarks = result.landmarks[0];
-    const thumbTip = landmarks[4];
-    const indexTip = landmarks[8];
-    const distance = getDistance(thumbTip, indexTip);
-    
-    const wasPinching = this.isPinching;
-    this.isPinching = distance < this.pinchThreshold;
+      let currentX = indexTip.x;
+      let currentY = indexTip.y;
+      let dx = 0;
+      let dy = 0;
 
-    // --- 逻辑判断 ---
-    
-    // 1. 判断 Click
-    if (wasPinching && !this.isPinching) {
-      // 从捏合状态变为非捏合状态 -> 释放
-      const duration = Date.now() - this.pinchStartTime;
-      if (duration < this.clickTimeout) {
-        this.resetState();
-        return { type: 'click', payload: { x: indexTip.x, y: indexTip.y, targetId: null }, timestamp: Date.now() };
+      if (this.lastIndexTip) {
+          dx = currentX - this.lastIndexTip.x;
+          dy = currentY - this.lastIndexTip.y;
+      }
+      this.lastIndexTip = indexTip; // 更新上一帧食指尖位置
+
+      // --- 逻辑判断 ---
+      // 1. 判断 Click (release after short pinch)
+      if (wasPinching && !this.isPinching) {
+        const duration = Date.now() - this.pinchStartTime;
+        if (duration < this.clickTimeout) {
+          newGesture = { type: 'click', payload: { x: currentX, y: currentY, targetId: null }, timestamp: Date.now() };
+        } else { 
+            newGesture = { type: 'dragend', payload: { x: currentX, y: currentY }, timestamp: Date.now() };
+        }
+        this.resetStateExceptLastEmitted(); // 释放捏合后重置状态
+      } 
+      // 2. 判断 Drag Start (pinch for long duration) 或 Dragging
+      else if (this.isPinching) {
+          if (!wasPinching) { // Just started pinching
+              this.pinchStartTime = Date.now();
+          }
+          const duration = Date.now() - this.pinchStartTime;
+          if (duration >= this.clickTimeout) { // Long pinch, consider it a drag
+              if (this.lastEmittedGesture?.type !== 'drag' || Math.abs(dx) > this.dragTolerance || Math.abs(dy) > this.dragTolerance) {
+                  newGesture = { type: 'drag', payload: { x: currentX, y: currentY, dx, dy }, timestamp: Date.now() };
+              }
+          } else { // Short pinch, still in potential click phase, act as point
+              if (this.lastEmittedGesture?.type !== 'point' || Math.abs(dx) > this.pointTolerance || Math.abs(dy) > this.pointTolerance) {
+                  newGesture = { type: 'point', payload: { x: currentX, y: currentY }, timestamp: Date.now() };
+              }
+          }
+      }
+      // 3. 判断 Pointing (default if no other gesture and not pinching)
+      else {
+        if (this.lastEmittedGesture?.type !== 'point' || Math.abs(dx) > this.pointTolerance || Math.abs(dy) > this.pointTolerance) {
+            newGesture = { type: 'point', payload: { x: currentX, y: currentY }, timestamp: Date.now() };
+        }
       }
     }
-    
-    // 2. 判断 Drag Start
-    if (!wasPinching && this.isPinching) {
-      // 刚开始捏合
-      this.pinchStartTime = Date.now();
-      // 这里可以返回 'dragstart'，但为了简化，我们让它在下一帧变成 'drag'
-    }
 
-    // 3. 判断 Dragging
-    if (this.isPinching) {
-      const duration = Date.now() - this.pinchStartTime;
-      if (duration >= this.clickTimeout) { // 长时间捏合认为是拖拽
-         // 在实际应用中，你还需要计算 dx, dy
-         return { type: 'drag', payload: { x: indexTip.x, y: indexTip.y, dx: 0, dy: 0 }, timestamp: Date.now() };
-      }
+    // Only emit a new gesture if it's significantly different from the last one
+    if (newGesture && !this.areGesturesDeepEqual(this.lastEmittedGesture, newGesture)) {
+        this.lastEmittedGesture = newGesture;
+        return newGesture;
+    } else {
+        return null; // No significant change, don't update
     }
-
-    // 4. 判断 Pointing (默认)
-    // 如果没有触发其他手势，就默认是'point'
-    return { type: 'point', payload: { x: indexTip.x, y: indexTip.y }, timestamp: Date.now() };
   }
   
   private resetState() {
     this.isPinching = false;
     this.pinchStartTime = 0;
+    this.lastIndexTip = null;
+    this.lastEmittedGesture = null; // Full reset
+  }
+
+  private resetStateExceptLastEmitted() {
+      this.isPinching = false;
+      this.pinchStartTime = 0;
+      this.lastIndexTip = null;
   }
 }
 
