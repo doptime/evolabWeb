@@ -61,7 +61,6 @@ if (typeof window !== 'undefined') {
     getSpeechVoices();
 }
 
-// --- Public API ---
 
 export const speak = (text: string, lang = 'zh-CN', rate = 1.0): Promise<void> => {
     return new Promise(async (resolve) => {
@@ -72,32 +71,48 @@ export const speak = (text: string, lang = 'zh-CN', rate = 1.0): Promise<void> =
             return resolve();
         }
 
+        // Wait a brief moment after cancel to avoid race condition
         window.speechSynthesis.cancel();
+        await new Promise(resolve => setTimeout(resolve, 50));
 
-        // FIX: Assign to the module-level variable to prevent garbage collection
-        currentUtterance = new SpeechSynthesisUtterance(text);
-        currentUtterance.lang = lang;
-        currentUtterance.rate = rate;
+        try {
+            const utterance = new SpeechSynthesisUtterance(text);
+            utterance.lang = lang;
+            utterance.rate = rate;
 
-        currentUtterance.onend = () => {
-            currentUtterance = null; // Clean up reference
+            // Get voices and set the appropriate one
+            const voices = await getSpeechVoices();
+            const voice = voices.find(v => v.lang === lang) || 
+                          voices.find(v => v.lang.startsWith(lang.split('-')[0]));
+            
+            if (voice) {
+                utterance.voice = voice;
+                // Some browsers require this to be set after voice assignment
+                utterance.lang = lang;
+            }
+
+            // Store reference
+            currentUtterance = utterance;
+
+            const cleanUp = () => {
+                currentUtterance = null;
+                resolve();
+            };
+
+            utterance.onend = cleanUp;
+            utterance.onerror = (event) => {
+                console.error('SpeechSynthesis Error:', event.error);
+                cleanUp();
+            };
+
+            // Add a small delay to ensure everything is ready
+            setTimeout(() => {
+                window.speechSynthesis.speak(utterance);
+            }, 10);
+        } catch (error) {
+            console.error('Error in speak function:', error);
             resolve();
-        };
-        currentUtterance.onerror = (event) => {
-            console.error('SpeechSynthesis Error:', event.error); // Log the actual error
-            currentUtterance = null; // Clean up reference
-            resolve();
-        };
-
-        const voices = await getSpeechVoices();
-        const voice = voices.find(v => v.lang === lang);
-        if (voice) {
-            currentUtterance.voice = voice;
-        } else {
-            console.warn(`No voice found for lang '${lang}'. Using browser default.`);
         }
-
-        window.speechSynthesis.speak(currentUtterance);
     });
 };
 
