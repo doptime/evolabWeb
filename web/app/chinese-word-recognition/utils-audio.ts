@@ -2,101 +2,126 @@
 
 import * as Tone from 'tone';
 
-// 全局变量，标记AudioContext是否已启动
+// --- State Management for Audio ---
 let isAudioContextStarted = false;
+let speechVoices: SpeechSynthesisVoice[] = [];
+// FIX: Keep a reference to the utterance to prevent it from being garbage-collected.
+let currentUtterance: SpeechSynthesisUtterance | null = null;
 
-// 确保AudioContext在用户交互后启动
-const ensureAudioContextStarted = async () => {
-    if (!isAudioContextStarted) {
-        try {
-            // 检查 Tone.context 的状态
-            if (Tone.context.state === 'suspended') {
-                await Tone.context.resume();
-                console.log("Tone.js AudioContext resumed.");
-            } else if (Tone.context.state === 'closed') {
-                // 如果已关闭，则重新启动 Tone.js，这将创建新的 AudioContext
-                await Tone.start();
-                console.log("Tone.js AudioContext started from closed state.");
-            } else if (Tone.context.state === 'running') {
-                // 如果已经运行，则不需要做任何事
-                console.log("Tone.js AudioContext is already running.");
-            }
-            isAudioContextStarted = true;
-        } catch (e) {
-            console.error("Error starting/resuming Tone.js AudioContext:", e);
-            isAudioContextStarted = false;
+// --- Initialization ---
+
+// Function to get voices, handles async loading
+const getSpeechVoices = (): Promise<SpeechSynthesisVoice[]> => {
+    return new Promise((resolve) => {
+        if (typeof window === 'undefined' || !window.speechSynthesis) {
+            return resolve([]);
         }
-    }
-};
-
-// 监听用户交互事件来启动AudioContext
-// 仅在客户端环境执行
-if (typeof window !== 'undefined') {
-    // 使用 capture: true 确保在事件捕获阶段触发，提高启动成功率
-    // 添加一次性事件监听，防止重复绑定
-    document.documentElement.addEventListener('mousedown', ensureAudioContextStarted, { once: true, capture: true });
-    document.documentElement.addEventListener('touchstart', ensureAudioContextStarted, { once: true, capture: true });
-    document.documentElement.addEventListener('keydown', ensureAudioContextStarted, { once: true, capture: true });
-    document.documentElement.addEventListener('click', ensureAudioContextStarted, { once: true, capture: true });
-}
-
-export const speak = (text: string, lang = 'zh-CN', rate = 1.0): Promise<void> => {
-    return new Promise(async (resolve) => {
-        await ensureAudioContextStarted(); // 确保 AudioContext 已启动
-
-        if (typeof window !== 'undefined' && window.speechSynthesis) {
-            const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = lang;
-            utterance.rate = rate;
-
-            // 确保在语音开始前设置 onend 和 onerror
-            utterance.onend = () => {
-                console.log(`Speech synthesis ended for: "${text}"`);
-                resolve();
-            };
-            utterance.onerror = (event) => {
-                console.error('SpeechSynthesisUtterance.onerror: An error occurred during speech synthesis.', event);
-                // 即使发生错误，也解决 Promise 以避免阻止后续流程
-                resolve();
-            };
-
-            // 确保在speak之前，浏览器已经加载了对应的语言包
-            // 遍历所有可用的声音，选择一个匹配语言的声音
-            const voices = window.speechSynthesis.getVoices();
-            const voice = voices.find(v => v.lang === lang);
-            if (voice) {
-                utterance.voice = voice;
-            } else {
-                console.warn(`No voice found for language: ${lang}. Using default.`);
-            }
-
-            window.speechSynthesis.speak(utterance);
-        } else {
-            console.warn('SpeechSynthesis not supported in this browser or environment.');
-            resolve(); // 如果不支持，也直接解决Promise
+        // Try to get voices immediately
+        const voices = window.speechSynthesis.getVoices();
+        if (voices.length > 0) {
+            speechVoices = voices;
+            return resolve(speechVoices);
         }
+        // If not available, wait for the onvoiceschanged event
+        window.speechSynthesis.onvoiceschanged = () => {
+            speechVoices = window.speechSynthesis.getVoices();
+            resolve(speechVoices);
+        };
     });
 };
 
 
+// Ensure AudioContext is started by user interaction.
+const ensureAudioContextStarted = async () => {
+    if (isAudioContextStarted || typeof window === 'undefined') return;
+    try {
+        if (Tone.context.state !== 'running') {
+            await Tone.start();
+            console.log("AudioContext started successfully.");
+        }
+        // Also ensure voices are loaded on the first interaction
+        if (speechVoices.length === 0) {
+            await getSpeechVoices();
+            console.log("Speech voices loaded.");
+        }
+        isAudioContextStarted = true;
+    } catch (e) {
+        console.error("Could not start AudioContext:", e);
+        isAudioContextStarted = false; // Allow retrying
+    }
+};
+
+// Attach interaction listeners only on the client
+if (typeof window !== 'undefined') {
+    const events: (keyof DocumentEventMap)[] = ['mousedown', 'touchstart', 'keydown', 'click'];
+    events.forEach(event => 
+        document.documentElement.addEventListener(event, ensureAudioContextStarted, { once: true, capture: true })
+    );
+    // Pre-warm the voices
+    getSpeechVoices();
+}
+
+// --- Public API ---
+
+export const speak = (text: string, lang = 'zh-CN', rate = 1.0): Promise<void> => {
+    return new Promise(async (resolve) => {
+        await ensureAudioContextStarted();
+
+        if (typeof window === 'undefined' || !window.speechSynthesis) {
+            console.warn('SpeechSynthesis not supported.');
+            return resolve();
+        }
+
+        window.speechSynthesis.cancel();
+
+        // FIX: Assign to the module-level variable to prevent garbage collection
+        currentUtterance = new SpeechSynthesisUtterance(text);
+        currentUtterance.lang = lang;
+        currentUtterance.rate = rate;
+
+        currentUtterance.onend = () => {
+            currentUtterance = null; // Clean up reference
+            resolve();
+        };
+        currentUtterance.onerror = (event) => {
+            console.error('SpeechSynthesis Error:', event.error); // Log the actual error
+            currentUtterance = null; // Clean up reference
+            resolve();
+        };
+
+        const voices = await getSpeechVoices();
+        const voice = voices.find(v => v.lang === lang);
+        if (voice) {
+            currentUtterance.voice = voice;
+        } else {
+            console.warn(`No voice found for lang '${lang}'. Using browser default.`);
+        }
+
+        window.speechSynthesis.speak(currentUtterance);
+    });
+};
+
 export const playSound = (note: string): Promise<void> => {
     return new Promise(async (resolve) => {
-        await ensureAudioContextStarted(); // 确保 AudioContext 已启动
+        await ensureAudioContextStarted();
 
-        const synth = new Tone.Synth().toDestination();
-        
-        // 使用 Tone.Time() 来解析音符持续时间，确保它是一个有效的数字
-        // Tone.Time("8n") 表示八分音符的时长
-        const noteDurationSeconds = Tone.Time("8n").toSeconds();
-        synth.triggerAttackRelease(note, "8n"); 
+        try {
+            // Use a specific synth to avoid conflicts and ensure disposal
+            const synth = new Tone.Synth().toDestination();
+            const duration = "8n";
+            const durationInSeconds = Tone.Time(duration).toSeconds();
 
-        // Resolve the promise after the note's duration.
-        setTimeout(() => {
-            // Disposing the synth is good practice for memory management.
-            if (synth && !synth.disposed) {
-                synth.dispose();
-            }
-            resolve();
-        }, noteDurationSeconds * 1000 + 100); // 增加少量延迟以确保声音完全播放，并留出缓冲时间
+            synth.triggerAttackRelease(note, duration);
+
+            setTimeout(() => {
+                if (synth && !synth.disposed) {
+                    synth.dispose();
+                }
+                resolve();
+            }, durationInSeconds * 1000 + 50); // Add a small buffer for safety
+        } catch (error) {
+            console.error("Failed to play sound with Tone.js:", error);
+            resolve(); // Resolve even if sound fails
+        }
     });
 };
