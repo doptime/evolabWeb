@@ -5,7 +5,8 @@ import * as Tone from 'tone';
 // --- State Management for Audio ---
 let isAudioContextStarted = false;
 let speechVoices: SpeechSynthesisVoice[] = [];
-// FIX: Keep a reference to the utterance to prevent it from being garbage-collected.
+// **FIX**: Keep a reference to the utterance to prevent it from being garbage-collected,
+// which is a common cause of speech synthesis failure.
 let currentUtterance: SpeechSynthesisUtterance | null = null;
 
 // --- Initialization ---
@@ -16,13 +17,10 @@ const getSpeechVoices = (): Promise<SpeechSynthesisVoice[]> => {
         if (typeof window === 'undefined' || !window.speechSynthesis) {
             return resolve([]);
         }
-        // Try to get voices immediately
-        const voices = window.speechSynthesis.getVoices();
-        if (voices.length > 0) {
-            speechVoices = voices;
+        speechVoices = window.speechSynthesis.getVoices();
+        if (speechVoices.length > 0) {
             return resolve(speechVoices);
         }
-        // If not available, wait for the onvoiceschanged event
         window.speechSynthesis.onvoiceschanged = () => {
             speechVoices = window.speechSynthesis.getVoices();
             resolve(speechVoices);
@@ -39,7 +37,6 @@ const ensureAudioContextStarted = async () => {
             await Tone.start();
             console.log("AudioContext started successfully.");
         }
-        // Also ensure voices are loaded on the first interaction
         if (speechVoices.length === 0) {
             await getSpeechVoices();
             console.log("Speech voices loaded.");
@@ -54,64 +51,65 @@ const ensureAudioContextStarted = async () => {
 // Attach interaction listeners only on the client
 if (typeof window !== 'undefined') {
     const events: (keyof DocumentEventMap)[] = ['mousedown', 'touchstart', 'keydown', 'click'];
-    events.forEach(event => 
-        document.documentElement.addEventListener(event, ensureAudioContextStarted, { once: true, capture: true })
+    const startAudio = () => ensureAudioContextStarted().then(() => {
+        events.forEach(event => document.documentElement.removeEventListener(event, startAudio, { capture: true }));
+    });
+    events.forEach(event =>
+        document.documentElement.addEventListener(event, startAudio, { once: true, capture: true })
     );
-    // Pre-warm the voices
-    getSpeechVoices();
+    getSpeechVoices(); // Pre-warm voices
 }
-
 
 export const speak = (text: string, lang = 'zh-CN', rate = 1.0): Promise<void> => {
     return new Promise(async (resolve) => {
         await ensureAudioContextStarted();
 
         if (typeof window === 'undefined' || !window.speechSynthesis) {
-            console.warn('SpeechSynthesis not supported.');
+            console.warn('Browser does not support speech synthesis.');
             return resolve();
         }
 
-        // Wait a brief moment after cancel to avoid race condition
-        window.speechSynthesis.cancel();
-        await new Promise(resolve => setTimeout(resolve, 50));
+        // The game logic awaits each speak call, so canceling previous speech is not desired here.
+        // window.speechSynthesis.cancel();
 
         try {
             const utterance = new SpeechSynthesisUtterance(text);
-            utterance.lang = lang;
+            currentUtterance = utterance; // **FIX**: Assign to the module-level variable.
+
+            utterance.lang = 'en-US';
             utterance.rate = rate;
 
-            // Get voices and set the appropriate one
             const voices = await getSpeechVoices();
-            const voice = voices.find(v => v.lang === lang) || 
-                          voices.find(v => v.lang.startsWith(lang.split('-')[0]));
-            
+
+            const voice = voices.find(v => v.lang === lang && v.localService) || voices.find(v => v.lang === lang);
+
             if (voice) {
                 utterance.voice = voice;
-                // Some browsers require this to be set after voice assignment
-                utterance.lang = lang;
+                console.log(`Using voice: ${voice.name} for language '${lang}'`);
+            } else {
+                console.warn(`No voice found for language '${lang}'. Using browser default.`);
             }
 
-            // Store reference
-            currentUtterance = utterance;
-
-            const cleanUp = () => {
-                currentUtterance = null;
+            utterance.onend = () => {
+                console.log(`SpeechSynthesis finished for text: "${text}"`);
+                currentUtterance = null; // Clear reference on completion.
                 resolve();
             };
 
-            utterance.onend = cleanUp;
             utterance.onerror = (event) => {
-                console.error('SpeechSynthesis Error:', event.error);
-                cleanUp();
+                // **FIX**: Log the actual error from `event.error`.
+                console.error(`SpeechSynthesis Error for text "${text}":`, event.error);
+                currentUtterance = null; // Clear reference on error.
+                resolve(); // Resolve anyway to not block the game flow.
             };
 
-            // Add a small delay to ensure everything is ready
-            setTimeout(() => {
-                window.speechSynthesis.speak(utterance);
-            }, 10);
+            console.log(`speak called with text: "${text}", lang: "${lang}", rate: ${rate}`);
+            window.speechSynthesis.speak(utterance);
+
         } catch (error) {
-            console.error('Error in speak function:', error);
-            resolve();
+            console.error('Failed to initiate speech synthesis:', error);
+            if (currentUtterance) currentUtterance = null;
+            resolve(); // Resolve to not block game flow.
         }
     });
 };
@@ -121,7 +119,6 @@ export const playSound = (note: string): Promise<void> => {
         await ensureAudioContextStarted();
 
         try {
-            // Use a specific synth to avoid conflicts and ensure disposal
             const synth = new Tone.Synth().toDestination();
             const duration = "8n";
             const durationInSeconds = Tone.Time(duration).toSeconds();

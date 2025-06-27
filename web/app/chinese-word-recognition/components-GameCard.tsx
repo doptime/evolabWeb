@@ -15,26 +15,31 @@ interface CardOption {
 
 interface GameCardProps {
     option: CardOption;
-    onSelect: (id: string) => void; 
     isSelected: boolean; // Is this the card the user picked?
     isRevealed: boolean; // Has the answer been revealed for this round?
 }
 
 const GameCard: React.FC<GameCardProps> = ({ option, isSelected, isRevealed }) => {
-    // Refined logic for visual feedback based on user request.
-    // 1. Only the selected card flips.
+    // FIX: Logic updated to strictly follow user feedback requirements.
+
+    // 1. A card only flips if it was selected.
     const isFlipped = isRevealed && isSelected;
-    // 2. Only the correct card is enlarged.
-    const isEnlarged = isRevealed && option.isCorrect;
-    // 3. The selected card flips 180deg. If it's also the correct one, it flips 360deg (back to front).
+
+    // 2. A card is only enlarged if it was selected AND it is the correct answer.
+    const isEnlarged = isRevealed && isSelected && option.isCorrect;
+
+    // 3. The rotation amount depends on whether the selected card is correct (360 deg) or not (180 deg).
     const rotation = isFlipped ? (option.isCorrect ? 360 : 180) : 0;
-    // 4. Other cards (not selected, not the correct one) have no visual feedback. This is implicitly handled.
+
+    // 4. Other cards (not selected) receive no visual feedback. This is handled by the logic above.
 
     const innerCardAnimate = {
         rotateY: rotation,
         scale: isEnlarged ? 1.2 : 1,
         y: isEnlarged ? -20 : 0,
-        zIndex: isEnlarged ? 10 : 1,
+        // Give the selected card a higher z-index to ensure its animation is on top.
+        // Give the enlarged (correct) card an even higher z-index.
+        zIndex: isEnlarged ? 10 : (isSelected ? 5 : 1),
     };
 
     return (
@@ -76,3 +81,4 @@ const GameCard: React.FC<GameCardProps> = ({ option, isSelected, isRevealed }) =
 }; 
 
 export default GameCard;
+
