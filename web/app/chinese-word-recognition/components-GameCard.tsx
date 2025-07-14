@@ -4,41 +4,31 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import NumberSVG from './components-NumberSVG';
 
+// This interface is now simpler, matching the one from the store
 interface CardOption {
     id: string;
     word: string;
     isCorrect: boolean;
     displayHint: string;
-    isNumeric?: boolean;
-    svg: React.FC | null;
+    isNumeric: boolean;
+    // The 'svg' prop is no longer available in the new data structure.
 }
 
 interface GameCardProps {
     option: CardOption;
-    isSelected: boolean; // Is this the card the user picked?
-    isRevealed: boolean; // Has the answer been revealed for this round?
+    isSelected: boolean;
+    isRevealed: boolean;
 }
 
 const GameCard: React.FC<GameCardProps> = ({ option, isSelected, isRevealed }) => {
-    // FIX: Logic updated to strictly follow user feedback requirements.
-
-    // 1. A card only flips if it was selected.
     const isFlipped = isRevealed && isSelected;
-
-    // 2. A card is only enlarged if it was selected AND it is the correct answer.
     const isEnlarged = isRevealed && isSelected && option.isCorrect;
-
-    // 3. The rotation amount depends on whether the selected card is correct (360 deg) or not (180 deg).
     const rotation = isFlipped ? (option.isCorrect ? 360 : 180) : 0;
-
-    // 4. Other cards (not selected) receive no visual feedback. This is handled by the logic above.
 
     const innerCardAnimate = {
         rotateY: rotation,
         scale: isEnlarged ? 1.2 : 1,
         y: isEnlarged ? -20 : 0,
-        // Give the selected card a higher z-index to ensure its animation is on top.
-        // Give the enlarged (correct) card an even higher z-index.
         zIndex: isEnlarged ? 10 : (isSelected ? 5 : 1),
     };
 
@@ -52,11 +42,12 @@ const GameCard: React.FC<GameCardProps> = ({ option, isSelected, isRevealed }) =
             >
                 {/* Card Front */}
                 <div className="absolute top-0 left-0 w-full h-full p-4 backface-hidden rounded-2xl shadow-xl bg-white border border-gray-200 flex flex-col items-center justify-center cursor-pointer">
-                     <div className="flex-grow flex items-center justify-center w-full">
+                     <div className="flex-grow flex items-center justify-center w-full text-6xl font-bold text-gray-700">
+                        {/* New logic for displaying content without SVG prop */}
                         {option.isNumeric ? (
-                            <NumberSVG number={parseInt(option.word)} className="text-8xl" />
+                            <NumberSVG number={parseInt(option.word, 10)} />
                         ) : (
-                            option.svg ? <option.svg className="w-24 h-24" /> : null
+                            <span>{option.word}</span>
                         )}
                     </div>
                     <p 
@@ -81,4 +72,3 @@ const GameCard: React.FC<GameCardProps> = ({ option, isSelected, isRevealed }) =
 }; 
 
 export default GameCard;
-

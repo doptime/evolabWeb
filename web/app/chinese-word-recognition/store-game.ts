@@ -2,42 +2,48 @@
 
 import { create } from 'zustand';
 import { speak, playSound } from './utils-audio';
-import { wordDatabase } from './data-words';
+// Import the new API and data structures
+import { apiWordSensationData, WordLearningData } from './data-words';
 
-interface WordData {
-    id: string;
+// This is the new internal representation for a processed word.
+// It helps bridge the gap between the new API data and what the components need.
+interface ProcessedWord {
     word: string;
-    isNumeric?: boolean; // 新增字段，标记是否为数字命题
-    hints: {
-        en: string;
-        jp: string;
-        es: string;
-        emoji: string;
-        root: string;
-        association: string;
-        svg: React.FC | null; // 可以是null，如果isNumeric为true，则渲染NumberSVG
-    };
+    isNumeric: boolean;
+    displayHint: string;
 }
 
+// The CardOption remains mostly the same, but we adapt how it's created.
 interface CardOption {
     id: string;
     word: string;
     isCorrect: boolean;
     displayHint: string;
-    isNumeric?: boolean;
-    svg: React.FC | null;
+    isNumeric: boolean;
+    // SVG is removed for simplicity as it's not in the new data structure.
 }
 
 interface GameState {
     gameId: number;
-    targetWord: WordData | null;
+    targetWord: ProcessedWord | null; // Use the processed word structure
     options: CardOption[];
     selectedCardId: string | null;
     gameState: 'playing' | 'revealed';
-    initializeGame: (words: WordData[]) => void;
+    wordList: WordLearningData[]; // Cache the fetched word list
+    initializeGame: () => void; // No longer takes arguments
     selectCard: (cardId: string) => void;
     nextGame: () => void;
 }
+
+// Helper to convert from API data to our internal structure
+const processSensationData = (data: WordLearningData): ProcessedWord => {
+    const isNumeric = !!data.Word.match(/^[0-9]+$/);
+    return {
+        word: data.Word,
+        isNumeric: isNumeric,
+        displayHint: data.AssociativeLearningBulletNotes,
+    };
+};
 
 export const useGameStore = create<GameState>((set, get) => ({
     gameId: 1,
@@ -45,86 +51,57 @@ export const useGameStore = create<GameState>((set, get) => ({
     options: [],
     selectedCardId: null,
     gameState: 'playing',
+    wordList: [], // Initialize empty word list
 
-    initializeGame: async (words) => { // 标记为 async
-        // 50% 概率选择数字命题，50% 概率选择普通单词命题
-        const numericWords = words.filter(w => w.isNumeric);
-        const nonNumericWords = words.filter(w => !w.isNumeric);
+    initializeGame: async () => {
+        let currentWords = get().wordList;
 
-        let target: WordData;
-        const useNumericChallenge = Math.random() < 0.5 && numericWords.length > 0; // 确保有数字单词才可能选择
-
-        if (useNumericChallenge) {
-            target = numericWords[Math.floor(Math.random() * numericWords.length)];
-        } else {
-            target = nonNumericWords[Math.floor(Math.random() * nonNumericWords.length)];
+        // Fetch words only if the list is empty
+        if (currentWords.length === 0) {
+            try {
+                const defaultWords = ["苹果", "窗户", "小说", "开心", "快乐", "1", "2", "3"];
+                const data = await apiWordSensationData(defaultWords);
+                if (data && data.length > 0) {
+                    currentWords = data;
+                    set({ wordList: data });
+                } else {
+                    console.error("Failed to fetch word data or data is empty.");
+                    return;
+                }
+            } catch (error) {
+                console.error("Error fetching word data:", error);
+                return; // Exit if API call fails
+            }
         }
 
-        // 构建提示语，确保长度凑到60个符号左右
-        const buildHint = (word: WordData) => {
-            // 确保substring操作不会超出字符串长度
-            const rootHint = word.hints.root ? `词根: ${word.hints.root.substring(0, Math.min(word.hints.root.length, 10))}...` : '';
-            const associationHint = word.hints.association ? `联想: ${word.hints.association.substring(0, Math.min(word.hints.association.length, 15))}...` : '';
+        const processedWords = currentWords.map(processSensationData);
 
-            if (word.isNumeric) {
-                return ` ${word.hints.emoji} ${word.hints.en} ${word.hints.jp} \n数学: ${word.word}的计数单位。 \n${associationHint}`; // 使用 \n 实现换行
-            } else {
-                return `${word.hints.emoji} ${word.hints.en} ${word.hints.jp} \n${rootHint} \n${associationHint}`; // 使用 \n 实现换行
-            }
-        };
+        const target = processedWords[Math.floor(Math.random() * processedWords.length)];
 
-        const correctOption: CardOption = {
-            id: 'card-correct', // 使用更通用的 ID，方便后续根据索引分配新的 ID
+        const correctOption: Omit<CardOption, 'id'> = {
             word: target.word,
             isCorrect: true,
-            displayHint: buildHint(target),
+            displayHint: target.displayHint,
             isNumeric: target.isNumeric,
-            svg: target.hints.svg,
         };
 
-        // 筛选出与目标单词不同且类型（数字/非数字）匹配的单词作为错误选项
-        const potentialIncorrectWords = words.filter(w =>
-            w.word !== target.word && w.isNumeric === target.isNumeric
-        );
+        const incorrectOptions = processedWords
+            .filter(w => w.word !== target.word)
+            .sort(() => 0.5 - Math.random())
+            .slice(0, 2)
+            .map(w => ({
+                word: w.word,
+                isCorrect: false,
+                displayHint: w.displayHint,
+                isNumeric: w.isNumeric,
+            }));
 
-        // 如果匹配类型不足2个，则尝试从所有单词中选择不重复的
-        let selectedIncorrectWords = [];
-        while (selectedIncorrectWords.length < 2 && potentialIncorrectWords.length > 0) {
-            const randomIndex = Math.floor(Math.random() * potentialIncorrectWords.length);
-            const selectedWord = potentialIncorrectWords.splice(randomIndex, 1)[0];
-            if (selectedWord.word !== target.word) { // 再次确认不与目标单词重复
-                selectedIncorrectWords.push(selectedWord);
-            }
-        }
+        const allOptionsRaw = [correctOption, ...incorrectOptions];
 
-        // 如果仍然不足两个，随机从所有单词中选择不重复的，且不与已选的重复
-        if (selectedIncorrectWords.length < 2) {
-            const allOtherWords = words.filter(w =>
-                w.word !== target.word &&
-                !selectedIncorrectWords.some(siw => siw.word === w.word)
-            );
-            while (selectedIncorrectWords.length < 2 && allOtherWords.length > 0) {
-                const randomIndex = Math.floor(Math.random() * allOtherWords.length);
-                selectedIncorrectWords.push(allOtherWords.splice(randomIndex, 1)[0]);
-            }
-        }
-
-
-        const incorrectOptions: CardOption[] = selectedIncorrectWords.map((wordData, index) => ({
-            id: `card-incorrect-${index + 1}`,
-            word: wordData.word,
-            isCorrect: false,
-            displayHint: buildHint(wordData),
-            isNumeric: wordData.isNumeric,
-            svg: wordData.hints.svg,
-        }));
-
-        const allOptions = [correctOption, ...incorrectOptions.slice(0, 2)];
-
-        const shuffledOptions = allOptions
+        const shuffledOptions = allOptionsRaw
             .map((value) => ({ value, sort: Math.random() }))
-            .sort((a, b) => a.sort - b.sort) // 确保选项是随机顺序
-            .map(({ value }, i) => ({ ...value, id: `card-${i}` })); // Assign new IDs after shuffling
+            .sort((a, b) => a.sort - b.sort)
+            .map(({ value }, i) => ({ ...value, id: `card-${i}` }));
 
         set({
             targetWord: target,
@@ -134,52 +111,45 @@ export const useGameStore = create<GameState>((set, get) => ({
             gameId: get().gameId + 1,
         });
 
-        // 确保先播放音效，再进行语音播报，并且语音播报之间有顺序
         await playSound("C4");
-        await speak(`请找出: ${target.word}`, 'zh-CN', 1.0); // 正常速度
-        await speak(target.word, 'zh-CN', 0.3); // 慢速
+        await speak(`请找出: ${target.word}`, 'zh-CN', 1.0);
+        await speak(target.word, 'zh-CN', 0.3);
     },
-    selectCard: async (cardId) => { // 标记为 async 函数
+
+    selectCard: async (cardId) => {
         const state = get();
-        // 只有在 playing 状态下才允许选择卡片并改变游戏状态
         if (state.gameState !== 'playing') {
-            // 如果已经揭示，则重复播报结果，但不改变状态
             const selectedCard = state.options.find(o => o.id === cardId);
-            if (selectedCard) {
+            if (selectedCard && state.targetWord) {
                 const feedbackText = selectedCard.isCorrect
-                    ? `正确！这就是 ${state.targetWord?.word}。`
-                    : `这是 ${selectedCard.word}。正确答案是 ${state.targetWord?.word}。`;
+                    ? `正确！这就是 ${state.targetWord.word}。`
+                    : `这是 ${selectedCard.word}。正确答案是 ${state.targetWord.word}。`;
                 await speak(feedbackText, 'zh-CN', 1.0);
             }
             return;
         }
 
         const selectedCard = state.options.find(o => o.id === cardId);
-        if (!selectedCard) return; // 如果没有找到卡片，直接返回
+        if (!selectedCard || !state.targetWord) return;
 
         let feedbackText = '';
         if (selectedCard.isCorrect) {
-            await playSound("C5"); // 播放正确音效
-            feedbackText = `太棒了！正确答案就是 ${state.targetWord?.word}。`;
+            await playSound("C5");
+            feedbackText = `太棒了！正确答案就是 ${state.targetWord.word}。`;
             await speak(feedbackText, 'zh-CN', 1.0);
         } else {
-            await playSound("C3"); // 播放错误音效
-            if (state.targetWord) {
-                feedbackText = `很遗憾，你选择了 ${selectedCard.word}。正确答案是 ${state.targetWord.word}。`;
-            } else {
-                feedbackText = `不对哦，再试一次吧！`;
-            }
+            await playSound("C3");
+            feedbackText = `很遗憾，你选择了 ${selectedCard.word}。正确答案是 ${state.targetWord.word}。`;
             await speak(feedbackText, 'zh-CN', 1.0);
         }
         set({ selectedCardId: cardId, gameState: 'revealed' });
     },
 
     nextGame: () => {
-        // 重置状态到初始，然后重新初始化游戏
         set({
             selectedCardId: null,
             gameState: 'playing',
         });
-        get().initializeGame(wordDatabase); // 使用 wordDatabase 来初始化游戏
+        get().initializeGame(); // Call without arguments
     }
 }));

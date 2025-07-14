@@ -16,7 +16,7 @@
     "@react-three/drei": "^10.3.0",
     "@react-three/fiber": "^9.1.2",
     "daisyui": "^5.0.35",
-    "doptime-client": "^0.7.7",
+    "doptime-client": "^0.8.0",
     "fortawesome": "^0.0.1-security",
     "framer-motion": "^12.18.1",
     "lucide-react": "^0.509.0",

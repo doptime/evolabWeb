@@ -16,6 +16,7 @@ interface GestureCaptureProviderProps {
   videoTop?: string; // CSS top position for the video (e.g., '0px', '10%')
   videoLeft?: string; // CSS left position for the video (e.g., '0px', '20px')
   videoOpacity?: number; // Opacity of the video (0.0 to 1.0)
+  enable?: boolean; // Whether to enable the gesture capture functionality
 }
 
 
@@ -26,15 +27,19 @@ export const GestureCaptureProvider = ({
   videoTop = '10px',    // Default top position
   videoLeft = '10px',   // Default left position
   videoOpacity = 0.8,   // Default opacity (80%)
+  enable = true,   // Default opacity (80%)
 }: GestureCaptureProviderProps) => {
   const videoRef = useRef<HTMLVideoElement>(null);
   const animationFrameId = useRef<number>();
-  const setGesture = useGestureStore((state) => state.setGesture); 
+  const setGesture = useGestureStore((state) => state.setGesture);
   const [isReady, setIsReady] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
 
   useEffect(() => {
     async function setupCameraAndService() {
+      if (!enable) {
+        return;
+      }
       try {
         await gestureService.initialize();
         console.log("Gesture service initialized.");
@@ -54,13 +59,13 @@ export const GestureCaptureProvider = ({
               }
             };
           } else {
-             setCameraError("视频元素未准备好。");
+            setCameraError("视频元素未准备好。");
           }
         }
       } catch (error: any) {
         console.error("Error during setup:", error);
-        const errorMessage = error.name === 'NotAllowedError' 
-          ? '摄像头权限被拒绝。请在浏览器设置中允许访问。' 
+        const errorMessage = error.name === 'NotAllowedError'
+          ? '摄像头权限被拒绝。请在浏览器设置中允许访问。'
           : `设置失败: ${error.message || '未知错误'}`;
         setCameraError(errorMessage);
       }
@@ -83,7 +88,7 @@ export const GestureCaptureProvider = ({
     }
 
     let lastProcessedGesture: Gesture | null = null;
-    
+
     const predictGesture = () => {
       if (!videoRef.current || videoRef.current.paused || videoRef.current.ended || videoRef.current.readyState < 3) {
         animationFrameId.current = requestAnimationFrame(predictGesture);
@@ -102,7 +107,7 @@ export const GestureCaptureProvider = ({
 
       let finalGesture: Gesture | null = null;
       if (detectionResult && detectionResult.landmarks && detectionResult.landmarks.length > 0) {
-        const processedGesture = gestureProcessor.process(detectionResult); 
+        const processedGesture = gestureProcessor.process(detectionResult);
         if (processedGesture) {
           // Add targetId for both click and dragstart events
           if ((processedGesture.type === 'click' || processedGesture.type === 'dragstart') && processedGesture.payload && 'x' in processedGesture.payload && 'y' in processedGesture.payload) {
@@ -111,26 +116,26 @@ export const GestureCaptureProvider = ({
             // 镜像 X 坐标是因为视频流通常是镜像的，而用户期望光标在真实世界的位置
             const screenX = (1 - x) * window.innerWidth;
             const screenY = y * window.innerHeight;
-            
+
             // 使用 document.elementFromPoint 获取最顶层的元素
             // 遍历父元素直到找到一个有 ID 的元素，或者直到根部
             let targetElement: Element | null = document.elementFromPoint(screenX, screenY);
             let targetId: string | null = null;
 
             while (targetElement && !targetElement.id && targetElement !== document.body) {
-                targetElement = targetElement.parentElement;
+              targetElement = targetElement.parentElement;
             }
             if (targetElement) {
-                targetId = targetElement.id;
+              targetId = targetElement.id;
             }
 
             // 调试信息：打印被点击的元素及其ID
             if (targetElement) {
-                console.log(`Click/DragStart detected at (${screenX.toFixed(2)}, ${screenY.toFixed(2)}). Target element:`, targetElement, `ID: ${targetId}`);
-                // 不再直接dispatchEvent模拟鼠标点击，而是将targetId传递给GestureStore
-                // 让React组件根据GestureStore的变化来响应
+              console.log(`Click/DragStart detected at (${screenX.toFixed(2)}, ${screenY.toFixed(2)}). Target element:`, targetElement, `ID: ${targetId}`);
+              // 不再直接dispatchEvent模拟鼠标点击，而是将targetId传递给GestureStore
+              // 让React组件根据GestureStore的变化来响应
             } else {
-                console.log(`Click/DragStart detected, no identifiable element at (${screenX.toFixed(2)}, ${screenY.toFixed(2)}).`);
+              console.log(`Click/DragStart detected, no identifiable element at (${screenX.toFixed(2)}, ${screenY.toFixed(2)}).`);
             }
 
             finalGesture = { ...processedGesture, payload: { ...processedGesture.payload, targetId } };
@@ -142,16 +147,16 @@ export const GestureCaptureProvider = ({
         // 如果没有检测到手部，则发出 idle 手势
         finalGesture = { type: 'idle', payload: null, timestamp: startTimeMs };
       }
-      
+
       // 只有当新手势与上次发出的手势显著不同时才更新 Zustand store
       if (finalGesture && !areGesturesDeepEqual(lastProcessedGesture, finalGesture)) {
-          setGesture(finalGesture);
-          lastProcessedGesture = finalGesture;
+        setGesture(finalGesture);
+        lastProcessedGesture = finalGesture;
       }
 
       animationFrameId.current = requestAnimationFrame(predictGesture);
     };
-    
+
     const areGesturesDeepEqual = (g1: Gesture | null, g2: Gesture | null): boolean => {
       if (!g1 && !g2) return true; // 都为null或undefined视为相同
       if (!g1 || !g2) return false; // 一个为null，另一个不为null视为不同
@@ -162,25 +167,25 @@ export const GestureCaptureProvider = ({
       switch (g1.type) {
         case 'point':
         case 'dragend':
-            // 比较 x 和 y 坐标，允许微小浮点误差
-            return g1.payload && g2.payload &&
-                   Math.abs(g1.payload.x - (g2.payload as any).x) < tolerance && 
-                   Math.abs(g1.payload.y - (g2.payload as any).y) < tolerance;
+          // 比较 x 和 y 坐标，允许微小浮点误差
+          return g1.payload && g2.payload &&
+            Math.abs(g1.payload.x - (g2.payload as any).x) < tolerance &&
+            Math.abs(g1.payload.y - (g2.payload as any).y) < tolerance;
         case 'click':
         case 'dragstart':
-            // 对于 click 和 dragstart，主要依赖 targetId。如果 targetId 相同，即使坐标略有变化也认为是相同的事件
-            // 避免在同一元素上微小的手势抖动触发多次点击/拖拽开始
-            return g1.payload.targetId === (g2.payload as any).targetId;
-            // 如果需要更严格的坐标比较，可以加上：
-            // && Math.abs((g1.payload as any).x - (g2.payload as any).x) < tolerance && 
-            // Math.abs((g1.payload as any).y - (g2.payload as any).y) < tolerance;
+          // 对于 click 和 dragstart，主要依赖 targetId。如果 targetId 相同，即使坐标略有变化也认为是相同的事件
+          // 避免在同一元素上微小的手势抖动触发多次点击/拖拽开始
+          return g1.payload.targetId === (g2.payload as any).targetId;
+        // 如果需要更严格的坐标比较，可以加上：
+        // && Math.abs((g1.payload as any).x - (g2.payload as any).x) < tolerance && 
+        // Math.abs((g1.payload as any).y - (g2.payload as any).y) < tolerance;
         case 'drag':
-            // 对于 drag，比较 x, y, dx, dy，允许微小浮点误差
-            return g1.payload && g2.payload &&
-                   Math.abs(g1.payload.x - (g2.payload as any).x) < tolerance && 
-                   Math.abs(g1.payload.y - (g2.payload as any).y) < tolerance &&
-                   Math.abs(g1.payload.dx - (g2.payload as any).dx) < tolerance &&
-                   Math.abs(g1.payload.dy - (g2.payload as any).dy) < tolerance; // 增加 dx, dy 比较
+          // 对于 drag，比较 x, y, dx, dy，允许微小浮点误差
+          return g1.payload && g2.payload &&
+            Math.abs(g1.payload.x - (g2.payload as any).x) < tolerance &&
+            Math.abs(g1.payload.y - (g2.payload as any).y) < tolerance &&
+            Math.abs(g1.payload.dx - (g2.payload as any).dx) < tolerance &&
+            Math.abs(g1.payload.dy - (g2.payload as any).dy) < tolerance; // 增加 dx, dy 比较
         case 'idle':
           return true; // idle 状态总是相同的
         default:
@@ -194,7 +199,7 @@ export const GestureCaptureProvider = ({
 
     return () => {
       if (animationFrameId.current) {
-          cancelAnimationFrame(animationFrameId.current);
+        cancelAnimationFrame(animationFrameId.current);
       }
     };
   }, [isReady, setGesture]);
@@ -203,7 +208,7 @@ export const GestureCaptureProvider = ({
     <>
       {children && children} {/* Render children if provided */}
 
-      {cameraError && (
+      {enable && cameraError && (
         <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-red-600 text-white p-4 rounded-lg shadow-lg z-[10000]">
           <p className="font-bold">摄像头错误:</p>
           <p>{cameraError}</p>
@@ -212,7 +217,7 @@ export const GestureCaptureProvider = ({
       )}
 
       {/* The video element for displaying the camera feed and gesture detection */}
-      <video
+      {enable && <video
         ref={videoRef}
         autoPlay
         playsInline
@@ -229,7 +234,7 @@ export const GestureCaptureProvider = ({
           borderRadius: '8px', // Slightly rounded corners for aesthetics
           boxShadow: '0 4px 12px rgba(0, 0, 0, 0.2)', // Subtle shadow
         }}
-      />
+      />}
     </>
   );
 };
