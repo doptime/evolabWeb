@@ -8,7 +8,6 @@ import { RefreshIcon } from './components-Icons';
 import { useGestureStore } from '../../components/guesture/gestureStore';
 import { useGameStore } from './store-game';
 
-// --- Main Game Page Component ---
 export default function LiteracyGamePage() {
     const {
         roundId,
@@ -18,7 +17,14 @@ export default function LiteracyGamePage() {
         gameState,
         initializeGame,
         selectOption,
-        startNewRound
+        startNewRound,
+        totalGoldCoins,
+        currentRoundGoldCoins,
+        rewardMessage,
+        nearMissMessage,
+        socialMessage,
+        growthMessage,
+        fsrsUpdateMessage,
     } = useGameStore();
 
     const gesture = useGestureStore((state) => state.gesture);
@@ -41,7 +47,6 @@ export default function LiteracyGamePage() {
     const isRevealed = gameState === 'feedback';
 
     const handleCardClick = (tabIndex: number, optionId: string) => {
-        // Allow direct mouse clicks for debugging/accessibility
         selectOption(tabIndex, optionId);
     };
 
@@ -83,12 +88,12 @@ export default function LiteracyGamePage() {
                             return (
                                 <motion.div
                                     key={option.id}
-                                    id={`option-${tabIndex}-${option.id}`} // Unique ID for gesture detection
+                                    id={`option-${tabIndex}-${option.id}`}
                                     onClick={() => handleCardClick(tabIndex, option.id)}
                                     className="cursor-pointer"
                                 >
                                     <GameCard
-                                        option={option} // The TabOption object
+                                        option={option}
                                         isSelected={isSelected}
                                         isRevealed={isRevealed}
                                         isCorrectForTarget={option.ownerTopicId === targetTopic?.id}
@@ -118,6 +123,68 @@ export default function LiteracyGamePage() {
                         </motion.button>
                     )}
                 </AnimatePresence>
+            </div>
+
+            {/* Reward Display Section */}
+            <div className="mt-8 w-full text-center">
+                {rewardMessage && (
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="text-2xl text-green-600 mb-4"
+                    >
+                        {rewardMessage}
+                    </motion.p>
+                )}
+
+                {nearMissMessage && (
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="text-2xl text-red-600 mb-4"
+                    >
+                        {nearMissMessage}
+                    </motion.p>
+                )}
+
+                {socialMessage && (
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="text-2xl text-blue-600 mb-4"
+                    >
+                        {socialMessage}
+                    </motion.p>
+                )}
+
+                {growthMessage && (
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="text-2xl text-purple-600 mb-4"
+                    >
+                        {growthMessage}
+                    </motion.p>
+                )}
+
+                {fsrsUpdateMessage && (
+                    <motion.p
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="text-2xl text-yellow-600 mb-4"
+                    >
+                        {fsrsUpdateMessage}
+                    </motion.p>
+                )}
+
+                <div className="text-2xl font-bold text-gray-800 mb-4">
+                    当前金币: {currentRoundGoldCoins.toFixed(2)} / 总金币: {totalGoldCoins.toFixed(2)}
+                </div>
             </div>
         </div>
     );

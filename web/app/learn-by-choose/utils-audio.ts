@@ -80,8 +80,19 @@ export const speak = (text: string, lang = 'zh-CN', rate = 1.0): Promise<void> =
             utterance.rate = rate;
 
             const voices = await getSpeechVoices();
+            for (const voice of voices) {
+                if (voice.lang.indexOf("zh-")<0>) {
+                    continue
+                }
+                console.log(voice.lang + `Available voice: ${voice.name}`);
+            }
 
-            const voice = voices.find(v => v.lang === lang && v.localService) || voices.find(v => v.lang === lang);
+            //const voice = voices.find(v => v.lang === lang && v.localService) || voices.find(v => v.lang === lang && v.name == "Tingting");
+            //- Tingting     
+            //- Yu-shu
+            //- Google 普通话（中国大陆）
+            //- Li-Mu
+            const voice = voices.find(v => v.lang === lang && v.name == "Tingting" && v.localService) || voices.find(v => v.name == "Meijia");
 
             if (voice) {
                 utterance.voice = voice;

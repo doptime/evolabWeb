@@ -3,13 +3,13 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useGestureStore } from '../../components/guesture/gestureStore';
-import { useGameStore } from './store-game'; // Import game store to get click chain
+import { useGameStore } from './store-game';
 
 const GestureCursor = () => {
     const gesture = useGestureStore((state) => state.gesture);
     const { type: gestureType, payload: gesturePayload } = gesture;
-    const clickChain = useGameStore((state) => state.clickChain);
-    
+    const { clickCountInRound } = useGameStore();
+
     const [position, setPosition] = useState({ x: -100, y: -100 });
     const [isActive, setIsActive] = useState(false);
     const clickTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -31,13 +31,13 @@ const GestureCursor = () => {
             setIsActive(false);
         }
 
-    }, [gestureType, gesturePayload]);
+    }, [gestureType, gesturePayload, clickCountInRound]);
 
     const getCursorContent = () => {
-        // Change cursor based on clickChain per product goal
-        if (clickChain >= 2) return '🔨³'; // 3rd click and onwards
-        if (clickChain === 1) return '🔨²'; // 2nd click
-        if (clickChain === 0) return '🔨'; // 1st click
+        // Change cursor based on clickCountInRound per product goal
+        if (clickCountInRound >= 3) return '🔨'; // 3rd click and onwards
+        if (clickCountInRound === 2) return '🔨²'; // 2nd click
+        if (clickCountInRound === 1) return '🔨³'; // 1st click
         return '';
     };
 
