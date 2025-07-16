@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useEffect, Fragment } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import GameCard from './components-GameCard';
@@ -7,6 +6,7 @@ import GestureCursor from './components-GestureCursor';
 import { RefreshIcon } from './components-Icons';
 import { useGestureStore } from '../../components/guesture/gestureStore';
 import { useGameStore } from './store-game';
+import GoldPool from './components-GoldPool';
 
 export default function LiteracyGamePage() {
     const {
@@ -25,6 +25,7 @@ export default function LiteracyGamePage() {
         socialMessage,
         growthMessage,
         fsrsUpdateMessage,
+        dopamineLevel
     } = useGameStore();
 
     const gesture = useGestureStore((state) => state.gesture);
@@ -59,6 +60,16 @@ export default function LiteracyGamePage() {
     return (
         <div className="w-full min-h-screen bg-gray-50 flex flex-col items-center justify-center font-sans relative overflow-hidden p-8">
             <GestureCursor />
+            <GoldPool />
+            <motion.div
+                className="fixed right-8 bottom-8 w-24 h-6 bg-gradient-to-r from-purple-400 to-pink-500 rounded-full"
+                animate={{
+                    scaleX: [0, dopamineLevel/100, 1],
+                    opacity: [0, 1, dopamineLevel > 0 ? 1 : 0]
+                }}
+            >
+                <div className="text-xs text-white text-center">多巴胺: {dopamineLevel?.toFixed(0)}</div>
+            </motion.div>
 
             <div className="text-center mb-8 h-16">
                 <AnimatePresence mode="wait">
@@ -84,7 +95,7 @@ export default function LiteracyGamePage() {
                         {tab.map((option) => {
                             const selection = selections.find(s => s.tabIndex === tabIndex);
                             const isSelected = selection?.selectedOptionId === option.id;
-                            
+                             
                             return (
                                 <motion.div
                                     key={option.id}
