@@ -1,5 +1,4 @@
 'use client';
-
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useGestureStore } from '../../components/guesture/gestureStore';
@@ -8,7 +7,10 @@ import { useGameStore } from './store-game';
 const GestureCursor = () => {
     const gesture = useGestureStore((state) => state.gesture);
     const { type: gestureType, payload: gesturePayload } = gesture;
-    const { clickCountInRound } = useGameStore();
+    // Use clickCountInRound to determine the *next* click's predicted value
+    const { comboCount } = useGameStore(); 
+    const selections = useGameStore(state => state.selections);
+    const clickCountInRound = selections.length;
 
     const [position, setPosition] = useState({ x: -100, y: -100 });
     const [isActive, setIsActive] = useState(false);
@@ -31,14 +33,17 @@ const GestureCursor = () => {
             setIsActive(false);
         }
 
-    }, [gestureType, gesturePayload, clickCountInRound]);
+    }, [gestureType, gesturePayload]);
+
 
     const getCursorContent = () => {
-        // Change cursor based on clickCountInRound per product goal
-        if (clickCountInRound >= 3) return '🔨'; // 3rd click and onwards
-        if (clickCountInRound === 2) return '🔨²'; // 2nd click
-        if (clickCountInRound === 1) return '🔨³'; // 1st click
-        return '';
+        // Corrected Logic: The biggest hammer predicts the reward for the FIRST click (count is 0).
+        switch (clickCountInRound) {
+            case 0: return '🔨³'; // Predicts high reward for the 1st click
+            case 1: return '🔨²'; // Predicts medium reward for the 2nd click
+            case 2: return '🔨';  // Predicts low reward for the 3rd click
+            default: return ''; // No special prediction for the 4th click
+        }
     };
 
     return (

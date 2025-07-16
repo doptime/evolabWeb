@@ -1,26 +1,30 @@
 'use client';
-
 import * as Tone from 'tone';
 
 // --- State Management for Audio ---
 let isAudioContextStarted = false;
 let speechVoices: SpeechSynthesisVoice[] = [];
-// **FIX**: Keep a reference to the utterance to prevent it from being garbage-collected,
-// which is a common cause of speech synthesis failure.
 let currentUtterance: SpeechSynthesisUtterance | null = null;
 
-// --- Initialization ---
+// --- Sound Library ---
+// Using Tone.js synths to create varied sounds without needing audio files.
+const sounds = {
+    correct: () => new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.2 } }).toDestination(),
+    incorrect: () => new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.2 } }).toDestination(),
+    crit: () => new Tone.MembraneSynth({ pitchDecay: 0.01, octaves: 5, envelope: { attack: 0.001, decay: 0.3, sustain: 0.01, release: 0.4 } }).toDestination(),
+    comboUp: () => new Tone.PluckSynth({ attackNoise: 0.5, dampening: 4000, resonance: 0.7 }).toDestination(),
+    comboBreak: () => new Tone.NoiseSynth({ noise: { type: 'pink' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0 } }).toDestination(),
+    coin: () => new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.1, release: 0.1 } }).toDestination(),
+};
 
-// Function to get voices, handles async loading
+type SoundType = keyof typeof sounds;
+
+// --- Initialization ---
 const getSpeechVoices = (): Promise<SpeechSynthesisVoice[]> => {
     return new Promise((resolve) => {
-        if (typeof window === 'undefined' || !window.speechSynthesis) {
-            return resolve([]);
-        }
+        if (typeof window === 'undefined' || !window.speechSynthesis) return resolve([]);
         speechVoices = window.speechSynthesis.getVoices();
-        if (speechVoices.length > 0) {
-            return resolve(speechVoices);
-        }
+        if (speechVoices.length > 0) return resolve(speechVoices);
         window.speechSynthesis.onvoiceschanged = () => {
             speechVoices = window.speechSynthesis.getVoices();
             resolve(speechVoices);
@@ -28,8 +32,6 @@ const getSpeechVoices = (): Promise<SpeechSynthesisVoice[]> => {
     });
 };
 
-
-// Ensure AudioContext is started by user interaction.
 const ensureAudioContextStarted = async () => {
     if (isAudioContextStarted || typeof window === 'undefined') return;
     try {
@@ -44,11 +46,11 @@ const ensureAudioContextStarted = async () => {
         isAudioContextStarted = true;
     } catch (e) {
         console.error("Could not start AudioContext:", e);
-        isAudioContextStarted = false; // Allow retrying
+        isAudioContextStarted = false;
     }
 };
 
-// Attach interaction listeners only on the client
+
 if (typeof window !== 'undefined') {
     const events: (keyof DocumentEventMap)[] = ['mousedown', 'touchstart', 'keydown', 'click'];
     const startAudio = () => ensureAudioContextStarted().then(() => {
@@ -57,56 +59,33 @@ if (typeof window !== 'undefined') {
     events.forEach(event =>
         document.documentElement.addEventListener(event, startAudio, { once: true, capture: true })
     );
-    getSpeechVoices(); // Pre-warm voices
+    getSpeechVoices();
 }
 
-export const speak = (text: string, lang = 'zh-CN', rate = 1.0): Promise<void> => {
+export const speak = (text: string, lang = 'zh-CN', options: { rate?: number, pitch?: number } = {}): Promise<void> => {
     return new Promise(async (resolve) => {
         await ensureAudioContextStarted();
-
         if (typeof window === 'undefined' || !window.speechSynthesis) {
             console.warn('Browser does not support speech synthesis.');
             return resolve();
         }
 
-        // The game logic awaits each speak call, so canceling previous speech is not desired here.
-        // window.speechSynthesis.cancel();
-
         try {
             const utterance = new SpeechSynthesisUtterance(text);
-            currentUtterance = utterance; // **FIX**: Assign to the module-level variable.
-
-            utterance.lang = 'en-US';
-            utterance.rate = rate;
+            currentUtterance = utterance;
+            utterance.lang = lang;
+            utterance.rate = options.rate ?? 1.0;
+            utterance.pitch = options.pitch ?? 1.0;
 
             const voices = await getSpeechVoices();
-            for (const voice of voices) {
-                if (voice.lang.indexOf("zh-")<0>) {
-                    continue
-                }
-                console.log(voice.lang + `Available voice: ${voice.name}`);
-            }
 
-            //const voice = voices.find(v => v.lang === lang && v.localService) || voices.find(v => v.lang === lang && v.name == "Tingting");
             //- Tingting     
             //- Yu-shu
             //- Google 普通话（中国大陆）
-            //- Li-Mu
-            const voice = voices.find(v => v.lang === lang && v.name == "Tingting" && v.localService) || voices.find(v => v.name == "Meijia");
+            const voice = voices.find(v => v.lang === lang && v.name === "Tingting" && v.localService) || voices.find(v => v.name === "Meijia") || voices.find(v => v.lang.startsWith('zh'));
+            if (voice) utterance.voice = voice;
 
-            if (voice) {
-                utterance.voice = voice;
-                console.log(`Using voice: ${voice.name} for language '${lang}'`);
-            } else {
-                console.warn(`No voice found for language '${lang}'. Using browser default.`);
-            }
-
-            utterance.onend = () => {
-                console.log(`SpeechSynthesis finished for text: "${text}"`);
-                currentUtterance = null; // Clear reference on completion.
-                resolve();
-            };
-
+            utterance.onend = () => { currentUtterance = null; resolve(); };
             utterance.onerror = (event) => {
                 // **FIX**: Log the actual error from `event.error`.
                 console.error(`SpeechSynthesis Error for text "${text}":`, event.error);
@@ -114,7 +93,7 @@ export const speak = (text: string, lang = 'zh-CN', rate = 1.0): Promise<void> =
                 resolve(); // Resolve anyway to not block the game flow.
             };
 
-            console.log(`speak called with text: "${text}", lang: "${lang}", rate: ${rate}`);
+            console.log(`speak called with text: "${text}", lang: "${lang}", rate: ${options.rate}`);
             window.speechSynthesis.speak(utterance);
 
         } catch (error) {
@@ -125,26 +104,30 @@ export const speak = (text: string, lang = 'zh-CN', rate = 1.0): Promise<void> =
     });
 };
 
-export const playSound = (note: string): Promise<void> => {
+export const playSound = (type: SoundType): Promise<void> => {
     return new Promise(async (resolve) => {
         await ensureAudioContextStarted();
-
         try {
-            const synth = new Tone.Synth().toDestination();
-            const duration = "8n";
-            const durationInSeconds = Tone.Time(duration).toSeconds();
-
-            synth.triggerAttackRelease(note, duration);
+            console.log(`Playing sound of type: ${type}`);
+            const synth = sounds[type]();
+            let durationInSeconds = 0.2;
+            
+            switch(type) {
+                case 'correct': synth.triggerAttackRelease('C5', '8n'); durationInSeconds = Tone.Time('8n').toSeconds(); break;
+                case 'incorrect': synth.triggerAttackRelease('C3', '8n'); durationInSeconds = Tone.Time('8n').toSeconds(); break;
+                case 'crit': synth.triggerAttackRelease('G5', '4n'); durationInSeconds = Tone.Time('4n').toSeconds(); break;
+                case 'comboUp': (synth as Tone.PluckSynth).triggerAttack('C6'); durationInSeconds = 0.3; break;
+                case 'comboBreak': (synth as Tone.NoiseSynth).triggerAttackRelease('16n'); durationInSeconds = Tone.Time('16n').toSeconds(); break;
+                case 'coin': synth.triggerAttackRelease('A5', '16n'); durationInSeconds = Tone.Time('16n').toSeconds(); break;
+            }
 
             setTimeout(() => {
-                if (synth && !synth.disposed) {
-                    synth.dispose();
-                }
+                if (synth && !synth.disposed) synth.dispose();
                 resolve();
-            }, durationInSeconds * 1000 + 50); // Add a small buffer for safety
+            }, durationInSeconds * 1000 + 50);
         } catch (error) {
-            console.error("Failed to play sound with Tone.js:", error);
-            resolve(); // Resolve even if sound fails
+            console.error(`Failed to play sound [${type}]:`, error);
+            resolve();
         }
     });
 };
