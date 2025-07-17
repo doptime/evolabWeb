@@ -7,8 +7,8 @@ import { useGameStore } from './store-game';
 const GestureCursor = () => {
     const gesture = useGestureStore((state) => state.gesture);
     const { type: gestureType, payload: gesturePayload } = gesture;
-    // Use clickCountInRound to determine the *next* click's predicted value
-    const { comboCount } = useGameStore(); 
+    
+    // Get the number of selections already made in the current round
     const selections = useGameStore(state => state.selections);
     const clickCountInRound = selections.length;
 
@@ -33,22 +33,24 @@ const GestureCursor = () => {
             setIsActive(false);
         }
 
+
     }, [gestureType, gesturePayload]);
 
 
     const getCursorContent = () => {
-        // Corrected Logic: The biggest hammer predicts the reward for the FIRST click (count is 0).
+        // The cursor hint predicts the reward for the *next* click.
+        // With 3 tabs, we have clicks 0, 1, and 2.
         switch (clickCountInRound) {
-            case 0: return '🔨³'; // Predicts high reward for the 1st click
-            case 1: return '🔨²'; // Predicts medium reward for the 2nd click
-            case 2: return '🔨';  // Predicts low reward for the 3rd click
-            default: return ''; // No special prediction for the 4th click
+            case 0: return '🥇'; // Gold for the 1st click
+            case 1: return '🥈'; // Silver for the 2nd click
+            case 2: return '🥉'; // Bronze for the 3rd click
+            default: return ''; // No hint after the last click
         }
     };
 
     return (
         <motion.div
-            className="fixed top-0 left-0 w-12 h-12 rounded-full bg-sky-500/50 border-2 border-white shadow-lg pointer-events-none z-[10001] flex items-center justify-center text-2xl"
+            className="fixed top-0 left-0 w-12 h-12 rounded-full bg-sky-500/50 border-2 border-white shadow-lg pointer-events-none z-[10001] flex items-center justify-center text-3xl"
             animate={{
                 x: position.x - 24, 
                 y: position.y - 24,
