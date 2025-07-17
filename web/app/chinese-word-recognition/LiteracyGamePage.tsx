@@ -22,7 +22,7 @@ export default function LiteracyGame() {
 
     useEffect(() => {
         if (gesture.timestamp === lastProcessedGestureTimestamp.current) {
-            return; 
+            return;
         }
 
         if (gesture.type === 'click' && gesture.payload?.targetId) {
@@ -67,7 +67,7 @@ export default function LiteracyGame() {
                         className="text-4xl font-bold text-gray-800"
                     >
                         {/* Use targetWord.word which is consistent in the new ProcessedWord structure */}
-                        请找出: "{targetWord?.word}"
+                        {'请找出: "{targetWord?.word}"'}
                     </motion.h1>
                 </AnimatePresence>
             </div>
@@ -92,7 +92,7 @@ export default function LiteracyGame() {
                                 option={option}
                                 isSelected={selectedCardId === option.id}
                                 isRevealed={isRevealed}
-                             />
+                            />
                         </motion.div>
                     ))}
                 </AnimatePresence>

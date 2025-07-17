@@ -5,10 +5,14 @@ import * as Tone from 'tone';
 let isAudioContextStarted = false;
 let speechVoices: SpeechSynthesisVoice[] = [];
 let currentUtterance: SpeechSynthesisUtterance | null = null;
-
+function playOggSound(filename, times, delay = 200) {
+    let count = 0;
+    const audio = new Audio(filename);
+    audio.currentTime = 0; // Rewind to the beginning
+    audio.play();
+}
 // --- Sound Library ---
-// Using Tone.js synths to create varied sounds without needing audio files.
-const sounds = {
+const soundGenerators = {
     correct: () => new Tone.Synth({ oscillator: { type: 'sine' }, envelope: { attack: 0.01, decay: 0.1, sustain: 0.2, release: 0.2 } }).toDestination(),
     incorrect: () => new Tone.Synth({ oscillator: { type: 'square' }, envelope: { attack: 0.01, decay: 0.2, sustain: 0, release: 0.2 } }).toDestination(),
     crit: () => new Tone.MembraneSynth({ pitchDecay: 0.01, octaves: 5, envelope: { attack: 0.001, decay: 0.3, sustain: 0.01, release: 0.4 } }).toDestination(),
@@ -17,7 +21,7 @@ const sounds = {
     coin: () => new Tone.Synth({ oscillator: { type: 'triangle' }, envelope: { attack: 0.005, decay: 0.1, sustain: 0.1, release: 0.1 } }).toDestination(),
 };
 
-type SoundType = keyof typeof sounds;
+type SoundType = keyof typeof soundGenerators;
 
 // --- Initialization ---
 const getSpeechVoices = (): Promise<SpeechSynthesisVoice[]> => {
@@ -103,22 +107,46 @@ export const speak = (text: string, lang = 'zh-CN', options: { rate?: number, pi
         }
     });
 };
-
-export const playSound = (type: SoundType): Promise<void> => {
+export const playSound = (type: SoundType, creditscore: number = 1): Promise<void> => {
     return new Promise(async (resolve) => {
         await ensureAudioContextStarted();
         try {
-            console.log(`Playing sound of type: ${type}`);
-            const synth = sounds[type]();
+            console.log(`playSound called with type: ${type}`);
+            const synth = soundGenerators[type]();
             let durationInSeconds = 0.2;
-            
-            switch(type) {
-                case 'correct': synth.triggerAttackRelease('C5', '8n'); durationInSeconds = Tone.Time('8n').toSeconds(); break;
-                case 'incorrect': synth.triggerAttackRelease('C3', '8n'); durationInSeconds = Tone.Time('8n').toSeconds(); break;
-                case 'crit': synth.triggerAttackRelease('G5', '4n'); durationInSeconds = Tone.Time('4n').toSeconds(); break;
-                case 'comboUp': (synth as Tone.PluckSynth).triggerAttack('C6'); durationInSeconds = 0.3; break;
-                case 'comboBreak': (synth as Tone.NoiseSynth).triggerAttackRelease('16n'); durationInSeconds = Tone.Time('16n').toSeconds(); break;
-                case 'coin': synth.triggerAttackRelease('A5', '16n'); durationInSeconds = Tone.Time('16n').toSeconds(); break;
+
+            switch (type) {
+                case 'correct':
+                    // synth.triggerAttackRelease('C5', '8n');
+                    // durationInSeconds = Tone.Time('8n').toSeconds();
+                    if (creditscore < 4) {
+                        playOggSound('coin1.ogg', creditscore << 0); // play ogg sound coin1.ogg
+                    } else if (creditscore < 10) {
+                        playOggSound('coin4.ogg', creditscore << 2); // play ogg sound coin1.ogg
+                    } else {
+                        playOggSound('coin16.ogg', creditscore << 4); // play ogg sound coin1.ogg
+                    }
+                    break;
+                case 'incorrect':
+                    synth.triggerAttackRelease('C3', '8n');
+                    durationInSeconds = Tone.Time('8n').toSeconds();
+                    break;
+                case 'crit':
+                    synth.triggerAttackRelease('G5', '4n');
+                    durationInSeconds = Tone.Time('4n').toSeconds();
+                    break;
+                case 'comboUp':
+                    (synth as Tone.PluckSynth).triggerAttack('C6');
+                    durationInSeconds = 0.3;
+                    break;
+                case 'comboBreak':
+                    (synth as Tone.NoiseSynth).triggerAttackRelease('16n');
+                    durationInSeconds = Tone.Time('16n').toSeconds();
+                    break;
+                case 'coin':
+                    synth.triggerAttackRelease('A5', '16n');
+                    durationInSeconds = Tone.Time('16n').toSeconds();
+                    break;
             }
 
             setTimeout(() => {
@@ -131,3 +159,5 @@ export const playSound = (type: SoundType): Promise<void> => {
         }
     });
 };
+
+// ... rest of the file remains the same ...

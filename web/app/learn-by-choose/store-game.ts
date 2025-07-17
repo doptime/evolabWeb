@@ -170,14 +170,14 @@ export const useGameStore = create<GameState>((set, get) => ({
         let newConsecutivePerfectHits = get().consecutivePerfectHits;
 
         if (isCorrect) {
-            await playSound('C5');
-
             const gamma = 0.2;
             const k_exploration = 10;
             const explorationFactor = 1 / Math.sqrt(N_user_mock + k_exploration);
             const chainMultiplier = 1 + 0.1 * clickChain;
 
             let baseReward = option.weight * (1 + gamma * explorationFactor) * chainMultiplier;
+            await playSound('correct', baseReward);
+
 
             if (newClickCountInRound === 1 && option.weight === Math.max(...targetTopic.knowledgePoints.map(kp => kp.weight))) {
                 const critMultiplier = 1.9 + Math.random() * 0.2;
@@ -210,7 +210,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             }));
 
         } else {
-            await playSound('C3');
+            await playSound('incorrect');
             currentNearMissMessage = `哇！我错过了超级暴击！ 我怎么没想到... (${option.innerActivitiesWhenFail})`;
             set({
                 nearMissMessage: currentNearMissMessage,

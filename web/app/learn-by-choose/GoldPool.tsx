@@ -4,28 +4,29 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from './store-game';
 
 const GoldPool = () => {
-  const { totalGoldCoins, currentRoundGoldCoins } = useGameStore();
+  const { totalGoldCoins } = useGameStore();
   const prevTotalGold = useRef(totalGoldCoins);
   const [particles, setParticles] = useState<{ id: number; x: number }[]>([]);
 
   useEffect(() => {
-    const newCoins = currentRoundGoldCoins;
+    const newCoins = totalGoldCoins - prevTotalGold.current;
     if (newCoins > 0) {
       const newParticles = Array.from({ length: Math.min(20, Math.floor(newCoins)) }).map(() => ({
         id: Math.random(),
-        x: Math.random() * 100, // Random x position
+        x: Math.random() * 100, // Start x position in vw
       }));
       setParticles(prev => [...prev, ...newParticles]);
     }
     prevTotalGold.current = totalGoldCoins;
-  }, [currentRoundGoldCoins]);
+  }, [totalGoldCoins]);
 
+  
   const onAnimationComplete = (id: number) => {
     setParticles(prev => prev.filter(p => p.id !== id));
   };
 
-  // Calculate water level (0-100%)
-  const waterLevelPercentage = Math.min(100, (totalGoldCoins / 1000) * 100);
+  // The water level fills up a 1000-coin bucket.
+  const waterLevelPercentage = (totalGoldCoins % 1000) / 10;
 
   return (
     <>
@@ -38,8 +39,8 @@ const GoldPool = () => {
               className="absolute w-5 h-5 bg-yellow-400 rounded-full"
               initial={{ x: `${particle.x}vw`, y: '-5vh', scale: Math.random() * 0.5 + 0.5 }}
               animate={{
-                y: '85vh',
-                x: '8rem',
+                y: '85vh', // Animate to the vertical position of the pool
+                x: 'calc(8rem)', // Animate to the horizontal position of the pool
                 opacity: [1, 1, 0],
               }}
               transition={{ duration: 1.2, ease: 'easeIn' }}
@@ -50,11 +51,10 @@ const GoldPool = () => {
         </AnimatePresence>
       </div>
 
+      
       {/* Gold Pool */}
-      <motion.div 
+      <motion.div
         className="fixed left-8 bottom-8 w-24 h-24 bg-yellow-200 rounded-full border-4 border-yellow-400 flex items-center justify-center overflow-hidden shadow-lg"
-        animate={{ scale: [1, 1.05, 1] }}
-        transition={{ duration: 0.3 }}
       >
         {/* Water Level */}
         <motion.div
