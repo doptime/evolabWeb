@@ -33,6 +33,7 @@ interface GameState {
     // --- New Reward-Related State ---
     totalGoldCoins: number;
     currentRoundGoldCoins: number;
+    lastRewardAmount: number; // Add this to trigger animations
     clickCountInRound: number;
     consecutivePerfectHits: number;
     superCritsAccumulated: number;
@@ -61,12 +62,10 @@ const updateFSRSStability = (s: number) => {
     console.log(`FSRS Stability updated by ${s}%`);
 };
 
-
 const calculateGrade = (correctness: number, timePercentile: number, N_user: number, k: number): number => {
     let alpha = 0.5, beta = 0.5;
     if (N_user < 50) { alpha = 0.7; beta = 0.3; }
     else if (N_user < 200) { alpha = 0.6; beta = 0.4; }
-
 
     const mockTimePercentile = 0.5;
     const g = 4 * Math.sqrt(alpha * (correctness ** 2) + beta * (1 - mockTimePercentile) ** 2);
@@ -89,6 +88,7 @@ export const useGameStore = create<GameState>((set, get) => ({
 
     totalGoldCoins: 0,
     currentRoundGoldCoins: 0,
+    lastRewardAmount: 0,
     clickCountInRound: 0,
     consecutivePerfectHits: 0,
     superCritsAccumulated: 0,
@@ -114,6 +114,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             selections: [],
             clickCountInRound: 0,
             currentRoundGoldCoins: 0,
+            lastRewardAmount: 0,
             rewardMessage: null,
             nearMissMessage: null,
             socialMessage: null,
@@ -136,6 +137,9 @@ export const useGameStore = create<GameState>((set, get) => ({
                 }
             });
         });
+        
+        // Req 5: The following line ensures that the items within each tab are shuffled randomly.
+        // This prevents the correct answer from always appearing in a predictable position.
         newOptionTabs.forEach(tab => shuffleArray(tab));
 
         set(state => ({
@@ -157,12 +161,11 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         const option = optionTabs[tabIndex].find(o => o.id === optionId);
         if (!option || !targetTopic) return;
-
         const isCorrect = option.ownerTopicId === targetTopic.id;
         const newClickChain = isCorrect ? clickChain + 1 : 0;
         const newClickCountInRound = clickCountInRound + 1;
 
-        set({ rewardMessage: null, nearMissMessage: null });
+        set({ rewardMessage: null, nearMissMessage: null, lastRewardAmount: 0 });
 
         let rewardEarned = 0;
         let currentRewardMessage: string | null = null;
@@ -177,7 +180,6 @@ export const useGameStore = create<GameState>((set, get) => ({
 
             let baseReward = option.weight * (1 + gamma * explorationFactor) * chainMultiplier;
             await playSound('correct', baseReward);
-
 
             if (newClickCountInRound === 1 && option.weight === Math.max(...targetTopic.knowledgePoints.map(kp => kp.weight))) {
                 const critMultiplier = 1.9 + Math.random() * 0.2;
@@ -201,21 +203,29 @@ export const useGameStore = create<GameState>((set, get) => ({
                 set(state => ({ superCritsAccumulated: state.superCritsAccumulated + 1 }));
             }
 
-
             set(state => ({
                 totalGoldCoins: state.totalGoldCoins + rewardEarned,
                 currentRoundGoldCoins: state.currentRoundGoldCoins + rewardEarned,
+                lastRewardAmount: rewardEarned, // Set amount for animation
                 rewardMessage: currentRewardMessage,
                 consecutivePerfectHits: newConsecutivePerfectHits,
             }));
 
         } else {
             await playSound('incorrect');
-            currentNearMissMessage = `哇！我错过了超级暴击！ 我怎么没想到... (${option.innerActivitiesWhenFail})`;
+            // Req 8: If the user clicks a wrong item, the regret message should come from the CORRECT item in that tab.
+            const correctOptionInTab = optionTabs[tabIndex].find(o => o.ownerTopicId === targetTopic.id);
+            const regretMessage = correctOptionInTab 
+                ? correctOptionInTab.innerActivitiesWhenFail 
+                : "这个好像不对哦..."; // Fallback message
+
+            currentNearMissMessage = `哇！差一点点！原来... ${regretMessage}`;
+            speak(currentNearMissMessage, 'zh-CN');
+
             set({
                 nearMissMessage: currentNearMissMessage,
-                consecutivePerfectHits: 0,
-                clickChain: 0,
+                consecutivePerfectHits: 0, // Reset perfect hit streak
+                clickChain: 0, // Reset click chain
             });
         }
 

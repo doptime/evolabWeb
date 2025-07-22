@@ -8,10 +8,11 @@ interface GameCardProps {
     isSelected: boolean;
     isRevealed: boolean;
     isCorrectForTarget: boolean;
+    isTabCompleted: boolean; // Req 1: Add prop to know if the parent tab is locked
 }
 
 
-const GameCard: React.FC<GameCardProps> = ({ option, isSelected, isRevealed, isCorrectForTarget }) => {
+const GameCard: React.FC<GameCardProps> = ({ option, isSelected, isRevealed, isCorrectForTarget, isTabCompleted }) => {
     // Req 6: Refined reveal logic.
     // - Incorrect cards flip to show their red "back".
     // - Correct cards stay on the "front", get a green highlight, and scale up for emphasis.
@@ -20,13 +21,16 @@ const GameCard: React.FC<GameCardProps> = ({ option, isSelected, isRevealed, isC
     const zIndex = isRevealed && isCorrectForTarget ? 10 : 1; // Ensure correct cards appear on top
     const cardShadow = isSelected ? 'shadow-2xl' : 'shadow-lg';
 
+    // Req 1: Apply grayscale and reduced opacity if the tab is completed and revealed
+    const lockedStyle = isTabCompleted ? 'grayscale opacity-60' : '';
+
     // The front of the card gets a green highlight when it's revealed as a correct answer.
     const frontStyle = isRevealed && isCorrectForTarget 
         ? 'bg-green-200 border-2 border-green-500'
         : 'bg-white border border-gray-200';
 
     return (
-        <div className="w-48 h-32 perspective-1000" style={{ zIndex }}>
+        <div className={`w-48 h-32 perspective-1000 ${lockedStyle}`} style={{ zIndex }}>
             <motion.div
                 className="relative w-full h-full text-center transform-style-3d"
                 animate={{

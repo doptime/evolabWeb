@@ -1,5 +1,5 @@
 'use client';
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import GameCard from './components-GameCard';
 import GestureCursor from './components-GestureCursor';
@@ -7,6 +7,7 @@ import { RefreshIcon } from './components-Icons';
 import { useGestureStore } from '../../components/guesture/gestureStore';
 import { useGameStore } from './store-game';
 import GoldPool from './components-GoldPool';
+import { speak } from './utils-audio'; // Req 6 & 7: Import speak utility
 
 export default function LiteracyGamePage() {
     const {
@@ -15,6 +16,7 @@ export default function LiteracyGamePage() {
         optionTabs,
         selections,
         gameState,
+        clickCountInRound,
         initializeGame,
         selectOption,
         startNewRound,
@@ -26,6 +28,7 @@ export default function LiteracyGamePage() {
     } = useGameStore();
 
     const gesture = useGestureStore((state) => state.gesture);
+    const hoverTimer = useRef<NodeJS.Timeout | null>(null); // Req 7: Ref for hover timer
 
     useEffect(() => {
         initializeGame();
@@ -37,15 +40,15 @@ export default function LiteracyGamePage() {
             if (targetId.startsWith('option-')) {
                 const [, tabIndexStr, optionId] = targetId.split('-');
                 const tabIndex = parseInt(tabIndexStr, 10);
-                selectOption(tabIndex, optionId);
+                handleCardClick(tabIndex, optionId);
             }
         }
     }, [gesture, selectOption]);
 
     const isRevealed = gameState === 'feedback';
-    const clickCount = selections.length;
 
     const handleCardClick = (tabIndex: number, optionId: string) => {
+        if (hoverTimer.current) clearTimeout(hoverTimer.current); // Clear hover timer on click
         selectOption(tabIndex, optionId);
     };
 
@@ -55,12 +58,20 @@ export default function LiteracyGamePage() {
         }
     };
 
+    // Req 6: Handler to replay question audio
+    const handleQuestionClick = () => {
+        if (targetTopic) {
+            speak(`请找出与 "${targetTopic.question}" 相关的内容`, 'zh-CN');
+        }
+    };
+
     return (
         <div className="w-full min-h-screen bg-gray-50 flex flex-col items-center justify-center font-sans relative overflow-hidden p-8">
             <GestureCursor />
             <GoldPool />
             
-            <div className="text-center mb-8 h-16">
+            {/* Req 6: Added cursor-pointer and onClick handler to replay question audio */}
+            <div className="text-center mb-8 h-16 cursor-pointer" onClick={handleQuestionClick}>
                 <AnimatePresence mode="wait">
                     <motion.h1
                         key={`title-${roundId}`}
@@ -75,28 +86,26 @@ export default function LiteracyGamePage() {
                 </AnimatePresence>
             </div>
 
-            {/* Req 7: Changed to a flex layout for 3 tabs */}
             <div className="flex flex-row items-start justify-center gap-6 w-full max-w-6xl">
                 {optionTabs.map((tab, tabIndex) => {
-                    // Req 1: Check if tab is completed
                     const isTabCompleted = selections.some(s => s.tabIndex === tabIndex);
 
-                    // Req 2: Determine glow class for active, uncompleted tabs
+                    // Req 2: Implement breathing light effect for reward hints.
                     let glowClass = '';
                     if ((gameState === 'question' || gameState === 'answering') && !isTabCompleted) {
-                        if (clickCount === 0) {
-                            glowClass = 'animate-pulse border-yellow-400 shadow-lg shadow-yellow-400/50'; // Gold
-                        } else if (clickCount === 1) {
-                            glowClass = 'animate-pulse border-slate-400 shadow-lg shadow-slate-400/50'; // Silver
-                        } else if (clickCount === 2) {
-                            glowClass = 'animate-pulse border-orange-500 shadow-lg shadow-orange-500/50'; // Bronze
+                        if (clickCountInRound === 0) {
+                            // Deep golden-yellow for high reward hint
+                            glowClass = 'animate-pulse border-amber-500 shadow-lg shadow-amber-500/50';
+                        } else if (clickCountInRound === 1) {
+                            // Silver for medium reward hint
+                            glowClass = 'animate-pulse border-slate-400 shadow-lg shadow-slate-400/50';
                         }
                     }
                     
                     const tabContainerClasses = `
-                        bg-gray-200/50 rounded-2xl p-4 flex flex-wrap items-center justify-center gap-4 
+                        relative bg-gray-200/50 rounded-2xl p-4 flex flex-wrap items-center justify-center gap-4 
                         border-2 border-dashed transition-all duration-300
-                        ${isTabCompleted ? 'bg-gray-400/30 border-gray-400 pointer-events-none' : 'border-gray-300'}
+                        ${isTabCompleted ? 'border-gray-400' : 'border-gray-300'}
                         ${glowClass}
                     `;
 
@@ -106,6 +115,13 @@ export default function LiteracyGamePage() {
                             className={tabContainerClasses.trim().replace(/\s+/g, ' ')}
                             style={{ minHeight: '20rem' }} // Give tabs a consistent height
                         >
+                            {/* Req 1: Add a lock overlay for completed tabs */}
+                            {isTabCompleted && (
+                                <div className="absolute inset-0 bg-gray-400/40 rounded-2xl flex items-center justify-center z-20 pointer-events-none">
+                                    <span className="text-6xl opacity-70">🔒</span>
+                                </div>
+                            )}
+
                             {tab.map((option) => {
                                 const selection = selections.find(s => s.tabIndex === tabIndex);
                                 const isSelected = selection?.selectedOptionId === option.id;
@@ -116,6 +132,17 @@ export default function LiteracyGamePage() {
                                         key={option.id}
                                         id={`option-${tabIndex}-${option.id}`}
                                         onClick={() => !isTabCompleted && handleCardClick(tabIndex, option.id)}
+                                        // Req 7: Add hover handlers to play audio after 1 second
+                                        onMouseEnter={() => {
+                                            if (isTabCompleted) return;
+                                            if (hoverTimer.current) clearTimeout(hoverTimer.current);
+                                            hoverTimer.current = setTimeout(() => {
+                                                speak(option.text, 'zh-CN');
+                                            }, 1000);
+                                        }}
+                                        onMouseLeave={() => {
+                                            if (hoverTimer.current) clearTimeout(hoverTimer.current);
+                                        }}
                                         className="cursor-pointer"
                                     >
                                         <GameCard
@@ -123,6 +150,8 @@ export default function LiteracyGamePage() {
                                             isSelected={isSelected}
                                             isRevealed={isRevealed}
                                             isCorrectForTarget={isCorrectForTarget}
+                                            // Req 1: Pass completion status to the card for styling
+                                            isTabCompleted={isTabCompleted}
                                         />
                                     </motion.div>
                                 );
