@@ -1,10 +1,9 @@
 'use client';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useGameStore } from './store-game';
 
 // A reusable sub-component for displaying a single pool
-// Req 3: Changed heightClass to a style prop `height` to support vh units.
 const Pool = ({ label, amount, maxAmount, height, widthClass, targetId }) => {
     const waterLevelPercentage = Math.min(100, (amount / maxAmount) * 100);
     return (
@@ -33,22 +32,26 @@ const Pool = ({ label, amount, maxAmount, height, widthClass, targetId }) => {
 };
 
 const GoldPool = () => {
-  // The store was updated to include lastRewardAmount to specifically trigger animations
   const { totalGoldCoins, currentRoundGoldCoins, lastRewardAmount } = useGameStore();
-  const [particles, setParticles] = useState<{ id: number; x: string }[]>([]);
+  const [particles, setParticles] = useState<{ id: number; x: string; targetX: string; }[]>([]);
 
-  // Trigger particle effect based on the last reward amount
+  // REQ 4: Trigger enhanced particle effect based on the last reward amount
   useEffect(() => {
     if (lastRewardAmount > 0) {
-      const newParticles = Array.from({ length: Math.min(20, Math.floor(lastRewardAmount)) }).map(() => ({
+      // The current pool is positioned next to the total pool.
+      // Container: left-8 (2rem). Total pool: w-24 (6rem). Gap: gap-4 (1rem). Current pool: w-16 (4rem).
+      // Target X start: 2 + 6 + 1 = 9rem. Target X end: 9 + 4 = 13rem. Center: 11rem.
+      const targetXPosition = '11rem';
+
+      const newParticles = Array.from({ length: Math.min(35, Math.floor(lastRewardAmount)) }).map(() => ({
         id: Math.random(),
-        // Req 4: Randomize start position within the horizontal area of the current pool.
-        // Current pool area: left: 9rem, width: 4rem. So from 9rem to 13rem.
-        x: `${9 + Math.random() * 4}rem`,
+        // Start X position is random within a 30vw range to create a 'rain' effect
+        x: `${Math.random() * 30}vw`,
+        targetX: targetXPosition,
       }));
       setParticles(prev => [...prev, ...newParticles]);
     }
-  }, [lastRewardAmount]); // Depend on lastRewardAmount
+  }, [lastRewardAmount]);
 
   const onAnimationComplete = (id: number) => {
     setParticles(prev => prev.filter(p => p.id !== id));
@@ -66,18 +69,20 @@ const GoldPool = () => {
               style={{
                 boxShadow: '0 0 8px rgba(251, 191, 36, 0.8)',
                 background: 'radial-gradient(circle, #fef08a, #facc15)',
-                left: particle.x, // Use left for positioning
+                left: particle.x, // Initial horizontal position
               }}
-              initial={{ y: '-5vh', scale: Math.random() * 0.5 + 0.5 }}
+              initial={{ y: '-5vh', scale: Math.random() * 0.5 + 0.6 }}
               animate={{
-                // Req 4: Animate vertically into the current round pool area.
+                // Animate to converge on the current round pool's horizontal center
+                x: particle.targetX,
+                // Animate vertically into the current round pool area
                 // Pool container is at bottom-8 (2rem), current pool height is 23vh.
-                // We make it fall somewhere inside the pool's vertical space.
-                y: `calc(100vh - 8rem - ${Math.random() * 10}vh)`,
-                scaleX: [1, 0.2], // Req 4: Narrowing effect
+                y: `calc(100vh - 2rem - ${Math.random() * 15}vh)`,
+                scaleX: [1, 0.2], // Narrowing effect as it falls
                 opacity: [1, 1, 0],
               }}
-              transition={{ duration: 0.8, ease: 'easeIn' }} // Req 4: Duration is 0.8s
+              // REQ 4: Longer, staggered duration up to 1.8s for a 'rain' effect
+              transition={{ duration: 1 + Math.random() * 0.8, ease: 'easeIn' }}
               onAnimationComplete={() => onAnimationComplete(particle.id)}
             >
             </motion.div>
@@ -85,7 +90,7 @@ const GoldPool = () => {
         </AnimatePresence>
       </div>
 
-      {/* Req 3: Two pools layout with specified vh heights */}
+      {/* Two pools layout with specified vh heights */}
       <div className="fixed left-8 bottom-8 flex items-end gap-4 z-10">
         {/* Total Pool */}
         <Pool

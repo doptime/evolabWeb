@@ -1,8 +1,7 @@
+'use client';
 import { create } from 'zustand';
 import { speak, playSound } from './utils-audio';
 import { Topic, KnowledgePoint, mockTopics } from './data-mock';
-
-// --- New Interfaces ---
 
 export interface TabOption extends KnowledgePoint {
     ownerTopicId: string;
@@ -14,32 +13,27 @@ interface Selection {
     tabIndex: number;
     selectedOptionId: string;
     isCorrect: boolean;
+    rewardAmount: number; // 新增：记录单次选择的奖励金额
 }
 
 
 interface GameState {
-    // Game Structure
     topicList: Topic[];
     targetTopic: Topic | null;
     learningGroup: Topic[];
     optionTabs: OptionTab[];
-
-    // Round State
     roundId: number;
     gameState: 'loading' | 'question' | 'answering' | 'feedback' | 'round_over';
     selections: Selection[];
     clickChain: number;
-
-    // --- New Reward-Related State ---
     totalGoldCoins: number;
     currentRoundGoldCoins: number;
-    lastRewardAmount: number; // Add this to trigger animations
+    lastRewardAmount: number;
     clickCountInRound: number;
     consecutivePerfectHits: number;
     superCritsAccumulated: number;
     easterEggCount: number;
     lastCalculatedGrade: number;
-
     rewardMessage: string | null;
     nearMissMessage: string | null;
     socialMessage: string | null;
@@ -47,17 +41,11 @@ interface GameState {
     fsrsUpdateMessage: string | null;
 }
 
-
-// --- Helper Functions ---
-
 const shuffleArray = <T>(array: T[]): T[] => {
     return [...array].sort(() => Math.random() - 0.5);
 };
 
-
-// --- Mock/Placeholder Functions ---
 let N_user_mock = 100;
-
 const updateFSRSStability = (s: number) => {
     console.log(`FSRS Stability updated by ${s}%`);
 };
@@ -72,20 +60,15 @@ const calculateGrade = (correctness: number, timePercentile: number, N_user: num
     return parseFloat(g.toFixed(2));
 };
 
-
-// --- Zustand Store ---
-
 export const useGameStore = create<GameState>((set, get) => ({
     topicList: [],
     targetTopic: null,
     learningGroup: [],
     optionTabs: [],
-
     roundId: 1,
     gameState: 'loading',
     selections: [],
     clickChain: 0,
-
     totalGoldCoins: 0,
     currentRoundGoldCoins: 0,
     lastRewardAmount: 0,
@@ -94,7 +77,6 @@ export const useGameStore = create<GameState>((set, get) => ({
     superCritsAccumulated: 0,
     easterEggCount: 0,
     lastCalculatedGrade: 0,
-
     rewardMessage: null,
     nearMissMessage: null,
     socialMessage: null,
@@ -138,14 +120,13 @@ export const useGameStore = create<GameState>((set, get) => ({
             });
         });
         
-        // Req 5: The following line ensures that the items within each tab are shuffled randomly.
-        // This prevents the correct answer from always appearing in a predictable position.
-        newOptionTabs.forEach(tab => shuffleArray(tab));
+        // 修复：确保选项卡内的知识点正确随机化
+        const shuffledTabs = newOptionTabs.map(tab => shuffleArray(tab));
 
         set(state => ({
             targetTopic,
             learningGroup,
-            optionTabs: newOptionTabs,
+            optionTabs: shuffledTabs,
             roundId: state.roundId + 1,
             gameState: 'question',
         }));
@@ -179,8 +160,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             const chainMultiplier = 1 + 0.1 * clickChain;
 
             let baseReward = option.weight * (1 + gamma * explorationFactor) * chainMultiplier;
-            await playSound('correct', baseReward);
-
+            
             if (newClickCountInRound === 1 && option.weight === Math.max(...targetTopic.knowledgePoints.map(kp => kp.weight))) {
                 const critMultiplier = 1.9 + Math.random() * 0.2;
                 rewardEarned = baseReward * critMultiplier;
@@ -202,34 +182,35 @@ export const useGameStore = create<GameState>((set, get) => ({
                 currentRewardMessage = "超级暴击！";
                 set(state => ({ superCritsAccumulated: state.superCritsAccumulated + 1 }));
             }
+            
+            await playSound('correct', rewardEarned);
 
             set(state => ({
                 totalGoldCoins: state.totalGoldCoins + rewardEarned,
                 currentRoundGoldCoins: state.currentRoundGoldCoins + rewardEarned,
-                lastRewardAmount: rewardEarned, // Set amount for animation
+                lastRewardAmount: rewardEarned,
                 rewardMessage: currentRewardMessage,
                 consecutivePerfectHits: newConsecutivePerfectHits,
             }));
 
         } else {
             await playSound('incorrect');
-            // Req 8: If the user clicks a wrong item, the regret message should come from the CORRECT item in that tab.
             const correctOptionInTab = optionTabs[tabIndex].find(o => o.ownerTopicId === targetTopic.id);
             const regretMessage = correctOptionInTab 
                 ? correctOptionInTab.innerActivitiesWhenFail 
-                : "这个好像不对哦..."; // Fallback message
+                : "这个好像不对哦...";
 
             currentNearMissMessage = `哇！差一点点！原来... ${regretMessage}`;
             speak(currentNearMissMessage, 'zh-CN');
 
             set({
                 nearMissMessage: currentNearMissMessage,
-                consecutivePerfectHits: 0, // Reset perfect hit streak
-                clickChain: 0, // Reset click chain
+                consecutivePerfectHits: 0, 
+                clickChain: 0, 
             });
         }
 
-        const newSelections = [...selections, { tabIndex, selectedOptionId: optionId, isCorrect }];
+        const newSelections = [...selections, { tabIndex, selectedOptionId: optionId, isCorrect, rewardAmount: rewardEarned }];
 
         set({
             selections: newSelections,

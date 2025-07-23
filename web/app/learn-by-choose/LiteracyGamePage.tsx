@@ -70,7 +70,6 @@ export default function LiteracyGamePage() {
             <GestureCursor />
             <GoldPool />
             
-            {/* Req 6: Added cursor-pointer and onClick handler to replay question audio */}
             <div className="text-center mb-8 h-16 cursor-pointer" onClick={handleQuestionClick}>
                 <AnimatePresence mode="wait">
                     <motion.h1
@@ -88,16 +87,14 @@ export default function LiteracyGamePage() {
 
             <div className="flex flex-row items-start justify-center gap-6 w-full max-w-6xl">
                 {optionTabs.map((tab, tabIndex) => {
-                    const isTabCompleted = selections.some(s => s.tabIndex === tabIndex);
+                    const selectionForTab = selections.find(s => s.tabIndex === tabIndex);
+                    const isTabCompleted = !!selectionForTab;
 
-                    // Req 2: Implement breathing light effect for reward hints.
                     let glowClass = '';
                     if ((gameState === 'question' || gameState === 'answering') && !isTabCompleted) {
                         if (clickCountInRound === 0) {
-                            // Deep golden-yellow for high reward hint
                             glowClass = 'animate-pulse border-amber-500 shadow-lg shadow-amber-500/50';
                         } else if (clickCountInRound === 1) {
-                            // Silver for medium reward hint
                             glowClass = 'animate-pulse border-slate-400 shadow-lg shadow-slate-400/50';
                         }
                     }
@@ -115,16 +112,25 @@ export default function LiteracyGamePage() {
                             className={tabContainerClasses.trim().replace(/\s+/g, ' ')}
                             style={{ minHeight: '20rem' }} // Give tabs a consistent height
                         >
-                            {/* Req 1: Add a lock overlay for completed tabs */}
+                            {/* REQ: Improved lock effect with reward display */}
                             {isTabCompleted && (
-                                <div className="absolute inset-0 bg-gray-400/40 rounded-2xl flex items-center justify-center z-20 pointer-events-none">
+                                <div className="absolute inset-0 bg-gray-400/60 rounded-2xl flex flex-col items-center justify-center z-20 pointer-events-none">
                                     <span className="text-6xl opacity-70">🔒</span>
+                                    {selectionForTab.isCorrect && selectionForTab.rewardAmount > 0 && (
+                                        <motion.span
+                                            initial={{ opacity: 0, y: 10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            transition={{ delay: 0.5, duration: 0.3 }}
+                                            className="mt-2 text-2xl font-bold text-yellow-600 drop-shadow-md"
+                                        >
+                                            +{Math.floor(selectionForTab.rewardAmount)}
+                                        </motion.span>
+                                    )}
                                 </div>
                             )}
 
                             {tab.map((option) => {
-                                const selection = selections.find(s => s.tabIndex === tabIndex);
-                                const isSelected = selection?.selectedOptionId === option.id;
+                                const isSelected = selectionForTab?.selectedOptionId === option.id;
                                 const isCorrectForTarget = option.ownerTopicId === targetTopic?.id;
                                 
                                 return (
@@ -132,7 +138,6 @@ export default function LiteracyGamePage() {
                                         key={option.id}
                                         id={`option-${tabIndex}-${option.id}`}
                                         onClick={() => !isTabCompleted && handleCardClick(tabIndex, option.id)}
-                                        // Req 7: Add hover handlers to play audio after 1 second
                                         onMouseEnter={() => {
                                             if (isTabCompleted) return;
                                             if (hoverTimer.current) clearTimeout(hoverTimer.current);
@@ -150,7 +155,6 @@ export default function LiteracyGamePage() {
                                             isSelected={isSelected}
                                             isRevealed={isRevealed}
                                             isCorrectForTarget={isCorrectForTarget}
-                                            // Req 1: Pass completion status to the card for styling
                                             isTabCompleted={isTabCompleted}
                                         />
                                     </motion.div>

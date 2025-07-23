@@ -19,6 +19,7 @@
     "doptime-client": "^0.8.0",
     "fortawesome": "^0.0.1-security",
     "framer-motion": "^12.18.1",
+    "immer": "^10.1.1",
     "lucide-react": "^0.509.0",
     "next": "15.3.2",
     "react": "^19.0.0",
