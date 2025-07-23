@@ -19,11 +19,12 @@ interface Selection {
 
 interface GameState {
     topicList: Topic[];
+    remainingTopics: Topic[]; // 新增：用于跟踪未学习的主题
     targetTopic: Topic | null;
     learningGroup: Topic[];
     optionTabs: OptionTab[];
     roundId: number;
-    gameState: 'loading' | 'question' | 'answering' | 'feedback' | 'round_over';
+    gameState: 'loading' | 'question' | 'answering' | 'feedback' | 'round_over' | 'game_over'; // 修改：增加 game_over 状态
     selections: Selection[];
     clickChain: number;
     totalGoldCoins: number;
@@ -40,6 +41,7 @@ interface GameState {
     growthMessage: string | null;
     fsrsUpdateMessage: string | null;
 }
+
 
 const shuffleArray = <T>(array: T[]): T[] => {
     return [...array].sort(() => Math.random() - 0.5);
@@ -62,6 +64,7 @@ const calculateGrade = (correctness: number, timePercentile: number, N_user: num
 
 export const useGameStore = create<GameState>((set, get) => ({
     topicList: [],
+    remainingTopics: [], // 新增
     targetTopic: null,
     learningGroup: [],
     optionTabs: [],
@@ -84,13 +87,26 @@ export const useGameStore = create<GameState>((set, get) => ({
     fsrsUpdateMessage: null,
 
     initializeGame: async () => {
-        set({ topicList: mockTopics, gameState: 'loading' });
+        const shuffledTopics = shuffleArray(mockTopics);
+        set({ 
+            topicList: mockTopics, 
+            remainingTopics: shuffledTopics, // 初始化时就设定好本轮游戏的题目顺序
+            gameState: 'loading',
+            // 重置总分等游戏全局状态
+            totalGoldCoins: 0,
+            roundId: 0,
+            easterEggCount: 0,
+        });
         get().startNewRound();
     },
 
     startNewRound: () => {
-        const { topicList } = get();
-        if (topicList.length === 0) return;
+        const { remainingTopics, topicList } = get();
+        if (remainingTopics.length === 0) {
+            set({ gameState: 'game_over' });
+            speak("恭喜你，完成了所有学习！", 'zh-CN');
+            return;
+        }
 
         set({
             selections: [],
@@ -105,9 +121,12 @@ export const useGameStore = create<GameState>((set, get) => ({
             gameState: 'loading',
         });
 
-        const shuffledTopics = shuffleArray(topicList);
-        const targetTopic = shuffledTopics[0];
-        const neighborTopic = shuffledTopics.length > 1 ? shuffledTopics[1] : targetTopic;
+        const newRemainingTopics = [...remainingTopics];
+        const targetTopic = newRemainingTopics.shift()!; // 从待办列表中取出一个，并更新列表
+
+        // 从所有主题中（除了当前目标）随机选一个作为邻居
+        const neighborCandidates = topicList.filter(t => t.id !== targetTopic.id);
+        const neighborTopic = shuffleArray(neighborCandidates)[0] ?? targetTopic;
         const learningGroup = [targetTopic, neighborTopic];
 
         const newOptionTabs: OptionTab[] = [[], [], [], []];
@@ -120,15 +139,17 @@ export const useGameStore = create<GameState>((set, get) => ({
             });
         });
         
-        // 修复：确保选项卡内的知识点正确随机化
-        const shuffledTabs = newOptionTabs.map(tab => shuffleArray(tab));
+        // 修复：先随机化每个选项卡内部的内容，再随机化所有选项卡的顺序
+        const tabsWithShuffledContent = newOptionTabs.map(tab => shuffleArray(tab));
+        const finalShuffledTabs = shuffleArray(tabsWithShuffledContent);
 
         set(state => ({
             targetTopic,
             learningGroup,
-            optionTabs: shuffledTabs,
+            optionTabs: finalShuffledTabs, // 使用完全随机化的选项卡
             roundId: state.roundId + 1,
             gameState: 'question',
+            remainingTopics: newRemainingTopics, // 更新剩余题目列表
         }));
 
         speak(`请找出与 "${targetTopic.question}" 相关的内容`, 'zh-CN');
@@ -240,8 +261,8 @@ export const useGameStore = create<GameState>((set, get) => ({
 
             if (correctSelectionsCount === 4) {
                 updateFSRSStability(5);
-                set({ fsrsUpdateMessage: "哇，你的探索链让知识更稳固啦！" });
-                await speak("哇，你的探索链让知识更稳固啦！", 'zh-CN');
+                // set({ fsrsUpdateMessage: "哇，你的探索链让知识更稳固啦！" });
+                // await speak("哇，你的探索链让知识更稳固啦！", 'zh-CN');
             }
 
             if (get().superCritsAccumulated >= 2 && Math.random() < 0.5) {
@@ -249,7 +270,7 @@ export const useGameStore = create<GameState>((set, get) => ({
                 await speak("嘭！一个巨大的金彩蛋出现了！", 'zh-CN');
             }
 
-            await speak('本轮完成！', 'zh-CN');
+            // 此处不再调用 speak('本轮完成！')，因为下一轮的语音提示会紧接着发生
         }
     },
 }));

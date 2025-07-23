@@ -52,6 +52,7 @@ export default function LiteracyGamePage() {
         selectOption(tabIndex, optionId);
     };
 
+
     const handleNextRoundClick = () => {
         if (gameState === 'feedback') {
             startNewRound();
@@ -129,7 +130,7 @@ export default function LiteracyGamePage() {
                                 </div>
                             )}
 
-                            {tab.map((option) => {
+                            {tab.map((option, index) => {
                                 const isSelected = selectionForTab?.selectedOptionId === option.id;
                                 const isCorrectForTarget = option.ownerTopicId === targetTopic?.id;
                                 
@@ -199,6 +200,30 @@ export default function LiteracyGamePage() {
                     </motion.p>
                 ))}
             </div>
+
+            {/* Game Over Screen */}
+            <AnimatePresence>
+                {gameState === 'game_over' && (
+                    <motion.div
+                        className="absolute inset-0 bg-gray-900/80 flex flex-col items-center justify-center z-50"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                    >
+                        <h2 className="text-6xl font-bold text-white mb-4 drop-shadow-lg">游戏结束!</h2>
+                        <p className="text-3xl text-yellow-400 mb-8 drop-shadow-md">恭喜你完成了所有挑战！</p>
+                        <motion.button
+                            onClick={initializeGame} // 调用 initializeGame 重置游戏
+                            whileHover={{ scale: 1.1 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="px-8 py-4 bg-green-500 text-white font-bold rounded-full text-xl shadow-xl"
+                        >
+                            重新开始
+                        </motion.button>
+                    </motion.div>
+                )}
+            </AnimatePresence>
         </div>
     );
+
 }
