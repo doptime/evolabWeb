@@ -167,3 +167,306 @@ export const mockTopics: Topic[] = [
         ]
     },
 ];
+
+export const mockTopics1: Topic[] =  [
+    {
+      "id": "number-0",
+      "question": "什么是数字零？",
+      "knowledgePoints": [
+        {
+          "id": "num-0-1",
+          "text": "🕳️ 形状像个圆圈",
+          "innerActivitiesWhenFail": "原来零长得圆圆的，像个甜甜圈！",
+          "weight": 10
+        },
+        {
+          "id": "num-0-2",
+          "text": "🚫 代表没有",
+          "innerActivitiesWhenFail": "零就是什么都没有的意思，像空空的盒子！",
+          "weight": 9
+        },
+        {
+          "id": "num-0-3",
+          "text": "🗣️ 读作“零”",
+          "innerActivitiesWhenFail": "这个数字念作“零”，要记住它的名字哦！",
+          "weight": 7
+        },
+        {
+          "id": "num-0-4",
+          "text": "🐣 小鸡有几只？（0只）",
+          "innerActivitiesWhenFail": "看到没有小鸡，就是零只小鸡呀！",
+          "weight": 6
+        }
+      ]
+    },
+    {
+      "id": "number-1",
+      "question": "什么是数字一？",
+      "knowledgePoints": [
+        {
+          "id": "num-1-1",
+          "text": "☝️ 像铅笔一样直",
+          "innerActivitiesWhenFail": "原来一长得直直的，像根小棍子！",
+          "weight": 10
+        },
+        {
+          "id": "num-1-2",
+          "text": "🍎 代表一个",
+          "innerActivitiesWhenFail": "一就是只有一个的意思，像一颗苹果！",
+          "weight": 9
+        },
+        {
+          "id": "num-1-3",
+          "text": "🗣️ 读作“一”",
+          "innerActivitiesWhenFail": "这个数字念作“一”，记住它的声音！",
+          "weight": 7
+        },
+        {
+          "id": "num-1-4",
+          "text": "🥚 鸡蛋有几个？（1个）",
+          "innerActivitiesWhenFail": "看到一个鸡蛋，就是一呀！",
+          "weight": 6
+        }
+      ]
+    },
+    {
+      "id": "number-2",
+      "question": "什么是数字二？",
+      "knowledgePoints": [
+        {
+          "id": "num-2-1",
+          "text": "🦢 像小鸭子弯弯的脖子",
+          "innerActivitiesWhenFail": "原来二弯弯的，像小鸭子的脖子，真可爱！",
+          "weight": 10
+        },
+        {
+          "id": "num-2-2",
+          "text": "👯‍♀️ 代表两个",
+          "innerActivitiesWhenFail": "二就是有两个的意思，像两只小手！",
+          "weight": 9
+        },
+        {
+          "id": "num-2-3",
+          "text": "🗣️ 读作“二”",
+          "innerActivitiesWhenFail": "这个数字念作“二”，快来跟我念！",
+          "weight": 7
+        },
+        {
+          "id": "num-2-4",
+          "text": "🎈 气球有几个？（2个）",
+          "innerActivitiesWhenFail": "数一数，有两个气球，就是二呀！",
+          "weight": 6
+        }
+      ]
+    },
+    {
+      "id": "number-3",
+      "question": "什么是数字三？",
+      "knowledgePoints": [
+        {
+          "id": "num-3-1",
+          "text": "👂 像小耳朵有三瓣",
+          "innerActivitiesWhenFail": "原来三像小耳朵，有三个弯弯！",
+          "weight": 10
+        },
+        {
+          "id": "num-3-2",
+          "text": "👨‍👩‍👧 代表三个",
+          "innerActivitiesWhenFail": "三就是有三个的意思，像一家三口！",
+          "weight": 9
+        },
+        {
+          "id": "num-3-3",
+          "text": "🗣️ 读作“三”",
+          "innerActivitiesWhenFail": "这个数字念作“三”，大声说出来！",
+          "weight": 7
+        },
+        {
+          "id": "num-3-4",
+          "text": "🍦 冰淇淋有几个？（3个）",
+          "innerActivitiesWhenFail": "哇，有三个冰淇淋，是数字三！",
+          "weight": 6
+        }
+      ]
+    },
+    {
+      "id": "number-4",
+      "question": "什么是数字四？",
+      "knowledgePoints": [
+        {
+          "id": "num-4-1",
+          "text": "🪑 像小椅子倒过来",
+          "innerActivitiesWhenFail": "原来四像倒过来的小椅子，真有趣！",
+          "weight": 10
+        },
+        {
+          "id": "num-4-2",
+          "text": "🧱 代表四个",
+          "innerActivitiesWhenFail": "四就是有四个的意思，像四块积木！",
+          "weight": 9
+        },
+        {
+          "id": "num-4-3",
+          "text": "🗣️ 读作“四”",
+          "innerActivitiesWhenFail": "这个数字念作“四”，再念一遍！",
+          "weight": 7
+        },
+        {
+          "id": "num-4-4",
+          "text": "🍎 苹果有几个？（4个）",
+          "innerActivitiesWhenFail": "数一数，有四个苹果，就是四呀！",
+          "weight": 6
+        }
+      ]
+    },
+    {
+      "id": "number-5",
+      "question": "什么是数字五？",
+      "knowledgePoints": [
+        {
+          "id": "num-5-1",
+          "text": "🖐️ 像钩子有小肚子",
+          "innerActivitiesWhenFail": "原来五像个钩子，还有个大肚子！",
+          "weight": 10
+        },
+        {
+          "id": "num-5-2",
+          "text": "⭐️ 代表五个",
+          "innerActivitiesWhenFail": "五就是有五个的意思，像五颗星星！",
+          "weight": 9
+        },
+        {
+          "id": "num-5-3",
+          "text": "🗣️ 读作“五”",
+          "innerActivitiesWhenFail": "这个数字念作“五”，记住了吗？",
+          "weight": 7
+        },
+        {
+          "id": "num-5-4",
+          "text": "⚽ 足球有几个？（5个）",
+          "innerActivitiesWhenFail": "五个足球，就是五！真棒！",
+          "weight": 6
+        }
+      ]
+    },
+    {
+      "id": "number-6",
+      "question": "什么是数字六？",
+      "knowledgePoints": [
+        {
+          "id": "num-6-1",
+          "text": "🐌 像小蜗牛卷卷的尾巴",
+          "innerActivitiesWhenFail": "原来六像小蜗牛，卷着小尾巴！",
+          "weight": 10
+        },
+        {
+          "id": "num-6-2",
+          "text": "🍭 代表六个",
+          "innerActivitiesWhenFail": "六就是有六个的意思，像六个棒棒糖！",
+          "weight": 9
+        },
+        {
+          "id": "num-6-3",
+          "text": "🗣️ 读作“六”",
+          "innerActivitiesWhenFail": "这个数字念作“六”，多读几遍！",
+          "weight": 7
+        },
+        {
+          "id": "num-6-4",
+          "text": "🐰 兔子有几只？（6只）",
+          "innerActivitiesWhenFail": "有六只可爱的小兔子，就是六呀！",
+          "weight": 6
+        }
+      ]
+    },
+    {
+      "id": "number-7",
+      "question": "什么是数字七？",
+      "knowledgePoints": [
+        {
+          "id": "num-7-1",
+          "text": "🪄 像拐杖有个小短腿",
+          "innerActivitiesWhenFail": "原来七像个小拐杖，下面还有个小短腿！",
+          "weight": 10
+        },
+        {
+          "id": "num-7-2",
+          "text": "🌈 代表七个",
+          "innerActivitiesWhenFail": "七就是有七个的意思，像七道彩虹！",
+          "weight": 9
+        },
+        {
+          "id": "num-7-3",
+          "text": "🗣️ 读作“七”",
+          "innerActivitiesWhenFail": "这个数字念作“七”，快来记住它！",
+          "weight": 7
+        },
+        {
+          "id": "num-7-4",
+          "text": "🚗 汽车有几辆？（7辆）",
+          "innerActivitiesWhenFail": "七辆汽车排排队，就是七呀！",
+          "weight": 6
+        }
+      ]
+    },
+    {
+      "id": "number-8",
+      "question": "什么是数字八？",
+      "knowledgePoints": [
+        {
+          "id": "num-8-1",
+          "text": "♾️ 像葫芦，上下两个圈",
+          "innerActivitiesWhenFail": "原来八像个小葫芦，上面一个圈下面一个圈！",
+          "weight": 10
+        },
+        {
+          "id": "num-8-2",
+          "text": "🐙 代表八个",
+          "innerActivitiesWhenFail": "八就是有八个的意思，像八爪鱼的八条腿！",
+          "weight": 9
+        },
+        {
+          "id": "num-8-3",
+          "text": "🗣️ 读作“八”",
+          "innerActivitiesWhenFail": "这个数字念作“八”，再念一遍！",
+          "weight": 7
+        },
+        {
+          "id": "num-8-4",
+          "text": "🔔 铃铛有几个？（8个）",
+          "innerActivitiesWhenFail": "八个铃铛响叮当，就是八呀！",
+          "weight": 6
+        }
+      ]
+    },
+    {
+      "id": "number-9",
+      "question": "什么是数字九？",
+      "knowledgePoints": [
+        {
+          "id": "num-9-1",
+          "text": "🎈 像气球带着根线",
+          "innerActivitiesWhenFail": "原来九像个气球，上面圆圆的，下面有条线！",
+          "weight": 10
+        },
+        {
+          "id": "num-9-2",
+          "text": "🐈 代表九个",
+          "innerActivitiesWhenFail": "九就是有九个的意思，像九条小鱼！",
+          "weight": 9
+        },
+        {
+          "id": "num-9-3",
+          "text": "🗣️ 读作“九”",
+          "innerActivitiesWhenFail": "这个数字念作“九”，你学会了吗？",
+          "weight": 7
+        },
+        {
+          "id": "num-9-4",
+          "text": "🦋 蝴蝶有几只？（9只）",
+          "innerActivitiesWhenFail": "数一数，有九只蝴蝶在飞舞，就是九呀！",
+          "weight": 6
+        }
+      ]
+    }
+  ]

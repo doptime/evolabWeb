@@ -75,6 +75,11 @@ export const speak = (text: string, lang = 'zh-CN', options: { rate?: number, pi
         }
 
         try {
+            // BUG FIX: Immediately cancel any ongoing or queued speech.
+            // This prevents a backlog of audio cues when the user clicks quickly,
+            // ensuring that the audio feedback is always relevant to the latest action.
+            window.speechSynthesis.cancel();
+
             const utterance = new SpeechSynthesisUtterance(text);
             currentUtterance = utterance;
             utterance.lang = lang;
@@ -91,8 +96,6 @@ export const speak = (text: string, lang = 'zh-CN', options: { rate?: number, pi
 
             utterance.onend = () => { currentUtterance = null; resolve(); };
             utterance.onerror = (event) => {
-                // **FIX**: Log the actual error from `event.error`.
-                console.error(`SpeechSynthesis Error for text "${text}":`, event.error);
                 currentUtterance = null; // Clear reference on error.
                 resolve(); // Resolve anyway to not block the game flow.
             };

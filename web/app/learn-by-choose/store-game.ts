@@ -1,7 +1,7 @@
 'use client';
 import { create } from 'zustand';
 import { speak, playSound } from './utils-audio';
-import { Topic, KnowledgePoint, mockTopics } from './data-mock';
+import { Topic, KnowledgePoint, mockTopics,mockTopics1 } from './data-mock';
 
 export interface TabOption extends KnowledgePoint {
     ownerTopicId: string;
@@ -42,9 +42,16 @@ interface GameState {
     fsrsUpdateMessage: string | null;
 }
 
-
+// BUG FIX: Replaced the biased sort-based shuffle with the robust Fisher-Yates algorithm.
+// This ensures true randomization for options and tabs, fixing the bug where the
+// layout could be predictable.
 const shuffleArray = <T>(array: T[]): T[] => {
-    return [...array].sort(() => Math.random() - 0.5);
+    const newArray = [...array];
+    for (let i = newArray.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [newArray[i], newArray[j]] = [newArray[j], newArray[i]];
+    }
+    return newArray;
 };
 
 let N_user_mock = 100;
@@ -87,9 +94,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     fsrsUpdateMessage: null,
 
     initializeGame: async () => {
-        const shuffledTopics = shuffleArray(mockTopics);
+        const shuffledTopics = shuffleArray(mockTopics1);
         set({ 
-            topicList: mockTopics, 
+            topicList: mockTopics1, 
             remainingTopics: shuffledTopics, // 初始化时就设定好本轮游戏的题目顺序
             gameState: 'loading',
             // 重置总分等游戏全局状态
@@ -139,7 +146,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             });
         });
         
-        // 修复：先随机化每个选项卡内部的内容，再随机化所有选项卡的顺序
+        // 先随机化每个选项卡内部的内容，再随机化所有选项卡的顺序
         const tabsWithShuffledContent = newOptionTabs.map(tab => shuffleArray(tab));
         const finalShuffledTabs = shuffleArray(tabsWithShuffledContent);
 

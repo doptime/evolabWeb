@@ -62,7 +62,7 @@ export default function LiteracyGamePage() {
     // Req 6: Handler to replay question audio
     const handleQuestionClick = () => {
         if (targetTopic) {
-            speak(`请找出与 "${targetTopic.question}" 相关的内容`, 'zh-CN');
+            speak(`请找出 "${targetTopic.question}"`, 'zh-CN');
         }
     };
 
@@ -81,7 +81,7 @@ export default function LiteracyGamePage() {
                         transition={{ duration: 0.5 }}
                         className="text-5xl font-bold text-gray-800"
                     >
-                        {targetTopic ? `请找出与 "${targetTopic.question}" 相关的内容` : '正在加载...'}
+                        {targetTopic ? `请找出 "${targetTopic.question}"` : '正在加载...'}
                     </motion.h1>
                 </AnimatePresence>
             </div>
