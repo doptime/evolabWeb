@@ -32,12 +32,12 @@ const sampleBuildings: BuildingData[] = [
   { id: 'b10_forest', name: '猎人小屋', x: 3500, y: 3500, color: '#2F4F4F', emoji: '🏹' },
 ];
 
-function App() {
+function GameMapPage() {
   return (
-    <div className="App">
+    <div className="w-full h-screen">
       <GameMap mapInfo={sampleMapInfo} buildings={sampleBuildings} />
     </div>
   );
 }
 
-export default App;
+export default GameMapPage;

@@ -1,19 +1,20 @@
-import React from 'react';
+import React, { memo } from 'react';
 import { BuildingData } from './types';
 
 interface BuildingProps {
   building: BuildingData;
 }
 
-const Building: React.FC<BuildingProps> = ({ building }) => {
+const Building: React.FC<BuildingProps> = memo(({ building }) => {
   return (
     <div
       className="absolute w-16 h-16 flex items-center justify-center transition-transform duration-300 hover:scale-110 cursor-pointer group rounded-lg shadow-xl border-2 border-black/20"
       style={{
         left: `${building.x}px`,
         top: `${building.y}px`,
-        transform: 'translate(-50%, -50%)',
+        transform: 'translate(-50%, -50%) translate3d(0,0,0)', // 启用硬件加速
         backgroundColor: building.color,
+        willChange: 'transform', // 优化动画性能
       }}
       title={building.name}
     >
@@ -30,6 +31,8 @@ const Building: React.FC<BuildingProps> = ({ building }) => {
       </div>
     </div>
   );
-};
+});
+
+Building.displayName = 'Building';
 
 export default Building;

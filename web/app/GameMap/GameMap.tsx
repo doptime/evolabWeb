@@ -1,222 +1,174 @@
 'use client';
-import React, { useState, useRef, useLayoutEffect, useEffect } from 'react';
-import { TransformWrapper, TransformComponent, ReactZoomPanPinchRef } from 'react-zoom-pan-pinch';
-import { Loader2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { BuildingData, MapInfo } from './types';
 
-import { MapInfo, BuildingData } from './types';
-import { getTerrainType, drawRealisticTerrain } from './terrainGenerator';
-import Building from './Building';
-import Minimap from './Minimap';
-
-// --- 常量定义 ---
-const MAP_WIDTH = 4096;
-const MAP_HEIGHT = 4096;
-
-// --- 内部子组件：道路 ---
-// 这个组件足够简单，可以直接定义在主文件内
-const Road: React.FC<{ from: { x: number; y: number }; to: { x: number; y: number } }> = ({ from, to }) => {
-  const angle = Math.atan2(to.y - from.y, to.x - from.x) * 180 / Math.PI;
-  const distance = Math.sqrt(Math.pow(to.x - from.x, 2) + Math.pow(to.y - from.y, 2));
-
-  return (
-    <div
-      className="absolute h-1.5 bg-amber-800/50 rounded-full"
-      style={{
-        left: `${from.x}px`,
-        top: `${from.y}px`,
-        width: `${distance}px`,
-        transform: `rotate(${angle}deg)`,
-        transformOrigin: '0 50%',
-        boxShadow: '0 0 5px rgba(46, 26, 3, 0.3)',
-      }}
-    />
-  );
-};
-
-
-// --- 主地图组件 ---
 interface GameMapProps {
   mapInfo: MapInfo;
   buildings: BuildingData[];
 }
 
-const GameMap: React.FC<GameMapProps> = ({ mapInfo, buildings }) => {
-  // --- State 和 Refs ---
-  const [viewPort, setViewPort] = useState({ x: 0, y: 0, scale: 1 });
-  const [containerSize, setContainerSize] = useState({ width: 0, height: 0 });
-  const [isTerrainLoading, setIsTerrainLoading] = useState(true);
+// 修复 Leaflet 默认图标问题
+if (typeof window !== 'undefined') {
+  delete (L.Icon.Default.prototype as any)._getIconUrl;
+  L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+  });
+}
 
-  const containerRef = useRef<HTMLDivElement>(null);
-  const transformRef = useRef<ReactZoomPanPinchRef>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+// 创建自定义建筑图标
+const createBuildingIcon = (building: BuildingData) => {
+  return L.divIcon({
+    html: `
+      <div class="w-8 h-8 rounded-lg border-2 border-white shadow-lg flex items-center justify-center text-base cursor-pointer transition-transform hover:scale-110" 
+           style="background: ${building.color};" 
+           title="${building.name}">
+        ${building.emoji}
+        <div style="font-size: 0.7em; margin-top: 2px; font-weight: bold; white-space: nowrap;">${building.name}</div>
+      </div>
+    `,
+    className: 'bg-transparent border-none',
+    iconSize: [32, 32],
+    iconAnchor: [16, 16],
+  });
+};
 
-  // --- Effects ---
+// 地图中心控制组件
+const MapController: React.FC<{ center: [number, number] }> = ({ center }) => {
+  const map = useMap();
 
-  // Effect 1: 异步生成地形纹理
-  // 这个 effect 只在组件首次挂载时运行一次。
   useEffect(() => {
-    const generateMap = async () => {
-      if (canvasRef.current) {
-        const ctx = canvasRef.current.getContext('2d');
-        if (ctx) {
-          setIsTerrainLoading(true);
-          console.log("Starting realistic terrain generation...");
-          await drawRealisticTerrain(ctx);
-          console.log("Terrain generation complete.");
-          setIsTerrainLoading(false);
-        }
-      }
-    };
-    generateMap();
-  }, []); // 空依赖数组确保只运行一次
+    map.setView(center, map.getZoom());
+  }, [map, center]);
 
-  // Effect 2: 设置初始地图位置
-  // 在布局计算完成后运行，以获取准确的容器尺寸。
-  useLayoutEffect(() => {
-    if (containerRef.current) {
-      const { width, height } = containerRef.current.getBoundingClientRect();
-      setContainerSize({ width, height });
+  return null;
+};
 
-      // 将地图中心定位到 mapInfo 指定的坐标
-      if (transformRef.current) {
-        const initialScale = 0.5; // 初始缩放级别，可以调整
-        transformRef.current.setTransform(
-          -mapInfo.x * initialScale + width / 2,
-          -mapInfo.y * initialScale + height / 2,
-          initialScale,
-          100, // 动画时长 (ms)
-          'easeOut'
-        );
-      }
-    }
-  }, [mapInfo.x, mapInfo.y]); // 依赖于初始坐标
-
-  // --- 渲染逻辑 ---
-
-  // 1. 过滤出可以放置的建筑
-  // 使用 useMemo 可以在 buildings 列表不变时避免重复计算
-  const placeableBuildings = React.useMemo(() => {
-    console.log("Filtering placeable buildings...");
-    return buildings.filter(b => {
-      const terrain = getTerrainType(b.x, b.y);
-      // 建筑物只能在草地和沙地上
-      return terrain === 'grass' || terrain === 'sand';
-    });
-  }, [buildings]);
-
-  // 2. 生成道路
-  // 使用 useMemo 可以在可放置建筑列表不变时避免重复计算
-  const roadsToRender = React.useMemo(() => {
-    console.log("Generating roads...");
-    const roads = [];
-    const connected = new Set<string>();
-    const DISTANCE_THRESHOLD = 400; // 只连接此距离内的建筑
-
-    // 辅助函数：检查道路路径是否穿过水域
-    const isPathValid = (from: {x: number, y: number}, to: {x: number, y: number}): boolean => {
-      const distance = Math.sqrt(Math.pow(to.x - from.x, 2) + Math.pow(to.y - from.y, 2));
-      const steps = Math.floor(distance / 50); // 每50px检查一次地形
-      if (steps < 2) return true; // 短距离直接视为有效
-
-      for (let i = 1; i < steps; i++) {
-        const t = i / steps;
-        const checkX = from.x + t * (to.x - from.x);
-        const checkY = from.y + t * (to.y - from.y);
-        if (getTerrainType(checkX, checkY) === 'water') {
-          return false; // 道路穿过水域，无效
-        }
-      }
-      return true;
-    };
-
-    for (let i = 0; i < placeableBuildings.length; i++) {
-      for (let j = i + 1; j < placeableBuildings.length; j++) {
-        const b1 = placeableBuildings[i];
-        const b2 = placeableBuildings[j];
-        const distance = Math.sqrt(Math.pow(b1.x - b2.x, 2) + Math.pow(b1.y - b2.y, 2));
-
-        if (distance < DISTANCE_THRESHOLD) {
-          if (isPathValid(b1, b2)) {
-            const roadKey = [b1.id, b2.id].sort().join('-');
-            if (!connected.has(roadKey)) {
-              roads.push(<Road key={roadKey} from={b1} to={b2} />);
-              connected.add(roadKey);
-            }
-          }
-        }
-      }
-    }
-    return roads;
-  }, [placeableBuildings]);
-
-
-  // --- JSX 输出 ---
+// 简化的小地图组件
+const SimpleMinimap: React.FC<{
+  buildings: BuildingData[];
+  mapInfo: MapInfo;
+}> = ({ buildings, mapInfo }) => {
   return (
-    <div ref={containerRef} className="w-full h-screen bg-gray-900 relative overflow-hidden select-none">
-      {/* 加载指示器 */}
-      {isTerrainLoading && (
-        <div className="absolute inset-0 bg-black/70 z-50 flex flex-col items-center justify-center text-white transition-opacity duration-300">
-          <Loader2 className="w-16 h-16 animate-spin mb-4" />
-          <p className="text-xl font-semibold">正在生成逼真地形...</p>
-        </div>
-      )}
-
-      <TransformWrapper
-        ref={transformRef}
-        initialScale={1}
-        initialPositionX={0}
-        initialPositionY={0}
-        minScale={0.1}
-        maxScale={3}
-        limitToBounds={false} // 允许地图移出视口边界
-        onTransformed={(_, state) => setViewPort({ x: state.positionX, y: state.positionY, scale: state.scale })}
-        wheel={{ step: 0.1 }}
-        panning={{ velocityDisabled: true }} // 禁用滑动惯性，手感更稳定
-      >
-        <TransformComponent
-          wrapperStyle={{ width: '100%', height: '100%', visibility: isTerrainLoading ? 'hidden' : 'visible' }}
-          contentStyle={{ width: MAP_WIDTH, height: MAP_HEIGHT }}
-        >
-          <div className="relative bg-blue-900" style={{ width: MAP_WIDTH, height: MAP_HEIGHT }}>
-            {/* 地形 Canvas 背景 */}
-            <canvas
-              ref={canvasRef}
-              width={MAP_WIDTH}
-              height={MAP_HEIGHT}
-              className="absolute top-0 left-0"
+    <div className="absolute bottom-4 left-4 w-64 h-64 bg-white/90 backdrop-blur-sm border-2 border-gray-300 rounded-lg overflow-hidden z-[1000]">
+      <div className="h-full relative bg-gradient-to-br from-green-200 to-blue-200">
+        {/* 渲染建筑物红点 */}
+        {buildings.map((building) => {
+          const x = (building.x / 4096) * 256;
+          const y = (building.y / 4096) * 256;
+          return (
+            <div
+              key={building.id}
+              className="absolute w-2 h-2 bg-red-500 rounded-full transform -translate-x-1/2 -translate-y-1/2"
+              style={{
+                left: `${x}px`,
+                top: `${y}px`,
+              }}
+              title={building.name}
             />
-            
-            {/* 游戏元素渲染层 */}
-            <div className="absolute top-0 left-0 w-full h-full pointer-events-none">
-              {/* 道路层 */}
-              <div className="pointer-events-auto">{roadsToRender}</div>
-              {/* 建筑层 */}
-              <div className="pointer-events-auto">
-                {placeableBuildings.map((building) => (
-                  <Building key={building.id} building={building} />
-                ))}
-              </div>
-            </div>
-          </div>
-        </TransformComponent>
-      </TransformWrapper>
+          );
+        })}
 
-      {/* 静态 UI 元素 */}
-      <div className="absolute top-4 left-4 bg-black/60 text-white p-3 rounded-lg shadow-lg pointer-events-none backdrop-blur-sm">
-        <h1 className="text-xl font-bold">{mapInfo.name}</h1>
-        <p className="text-sm text-gray-300">ID: {mapInfo.id}</p>
+        {/* 当前中心点 */}
+        <div
+          className="absolute w-3 h-3 bg-blue-600 border-2 border-white rounded-full transform -translate-x-1/2 -translate-y-1/2"
+          style={{
+            left: `${(mapInfo.x / 4096) * 256}px`,
+            top: `${(mapInfo.y / 4096) * 256}px`,
+          }}
+        />
+
+        <div className="absolute bottom-1 left-1 text-xs text-gray-600 bg-white/70 px-1 rounded">
+          缩略图
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const GameMap: React.FC<GameMapProps> = ({ mapInfo, buildings }) => {
+  const [mapInstance, setMapInstance] = useState<L.Map | null>(null);
+
+  // 将游戏坐标转换为地理坐标
+  const gameToLatLng = (x: number, y: number): [number, number] => {
+    // 简单的坐标转换：将4096x4096的游戏坐标映射到合理的经纬度范围
+    const lat = 50 - (y / 4096) * 20; // 纬度范围：30-50
+    const lng = -10 + (x / 4096) * 20; // 经度范围：-10到10
+    return [lat, lng];
+  };
+
+  const mapCenter = gameToLatLng(mapInfo.x, mapInfo.y);
+
+
+  return (
+    <div className="w-full h-screen relative">
+      <MapContainer
+        center={mapCenter}
+        zoom={10}
+        className="h-full w-full"
+        whenCreated={setMapInstance}
+      >
+        {/* 使用 OpenStreetMap 瓦片 */}
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+
+        <MapController center={mapCenter} />
+
+        {/* 渲染建筑物 */}
+        {buildings.map((building) => {
+          const position = gameToLatLng(building.x, building.y);
+          return (
+            <Marker
+              key={building.id}
+              position={position}
+              icon={createBuildingIcon(building)}
+            >
+              <Popup>
+                <div className="text-center p-2">
+                  <div className="text-2xl mb-1">{building.emoji}</div>
+                  <div className="font-bold text-lg">{building.name}</div>
+                  <div className="text-sm text-gray-600">
+                    坐标: ({building.x}, {building.y})
+                  </div>
+                  <div
+                    className="w-4 h-4 rounded mx-auto mt-2"
+                    style={{ backgroundColor: building.color }}
+                  />
+                </div>
+              </Popup>
+            </Marker>
+          );
+        })}
+      </MapContainer>
+
+      {/* 地图信息面板 */}
+      <div className="absolute top-4 left-4 bg-white/90 backdrop-blur-sm p-4 rounded-lg shadow-lg z-[1000] pointer-events-auto">
+        <h1 className="text-xl font-bold mb-1 text-gray-800">{mapInfo.name}</h1>
+        <p className="text-sm text-gray-600">ID: {mapInfo.id}</p>
+        <p className="text-sm text-gray-600">建筑数量: {buildings.length}</p>
+        <p className="text-xs text-gray-500 mt-2">
+          中心坐标: ({mapInfo.x}, {mapInfo.y})
+        </p>
       </div>
 
-      {/* 缩略图 (仅在地形加载完毕后显示) */}
-      {!isTerrainLoading && containerSize.width > 0 && (
-        <Minimap
-          buildings={placeableBuildings}
-          mapWidth={MAP_WIDTH}
-          mapHeight={MAP_HEIGHT}
-          viewPort={viewPort}
-          containerSize={containerSize}
+      {/* 简化版小地图 */}
+      {mapInstance && (
+        <SimpleMinimap
+          buildings={buildings}
+          mapInfo={mapInfo}
         />
       )}
+
+      {/* 控制说明 */}
+      <div className="absolute bottom-4 right-4 bg-white/90 backdrop-blur-sm p-3 rounded-lg shadow-lg z-[1000] pointer-events-none">
+        <p className="text-sm text-gray-700">🖱️ 拖拽移动 | 🔍 滚轮缩放 | 📍 点击建筑查看详情</p>
+      </div>
     </div>
   );
 };
