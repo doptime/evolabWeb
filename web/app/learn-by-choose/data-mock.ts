@@ -470,3 +470,277 @@ export const mockTopics1: Topic[] =  [
       ]
     }
   ]
+
+
+  export const mockTopicsBigNumbers: Topic[] = [
+  {
+    "id": "large-number-1-wan",
+    "question": "“一万”有多大？",
+    "knowledgePoints": [
+      {
+        "id": "ln-1-1",
+        "text": "💰 10个一千是“一万”",
+        "innerActivitiesWhenFail": "原来10个一千块叠在一起，就是一万块呀！好多钱！",
+        "weight": 10
+      },
+      {
+        "id": "ln-1-2",
+        "text": "🔢 从右边数，第五位是“万位”",
+        "innerActivitiesWhenFail": "哦！我知道了，个、十、百、千...下一个就是万位，它是第五个位置！",
+        "weight": 9
+      },
+      {
+        "id": "ln-1-3",
+        "text": "✍️ “一万”写作 10000，有4个0",
+        "innerActivitiesWhenFail": "哇，原来1后面跟着4个0就是一万，我记住这个样子啦！",
+        "weight": 8
+      },
+      {
+        "id": "ln-1-4",
+        "text": "🏟️ 一个体育场大约能坐1万人",
+        "innerActivitiesWhenFail": "原来一个体育场能装下这么多人，一万真是个大数！",
+        "weight": 6
+      }
+    ]
+  },
+  {
+    "id": "large-number-2-wan-level",
+    "question": "什么是“万级”？",
+    "knowledgePoints": [
+      {
+        "id": "ln-2-1",
+        "text": "👨‍👩‍👧‍👦 万级有四个成员：万、十万、百万、千万",
+        "innerActivitiesWhenFail": "原来万、十万、百万、千万是一家人，都住在'万级'这个大家庭里！",
+        "weight": 10
+      },
+      {
+        "id": "ln-2-2",
+        "text": "📏 每4个数字一级，万位开始是“万级”",
+        "innerActivitiesWhenFail": "我知道了！数数的时候要四位一分级，这样看大数就清楚多啦！",
+        "weight": 9
+      },
+      {
+        "id": "ln-2-3",
+        "text": "🗣️ 读完万级的数，要加上“万”字",
+        "innerActivitiesWhenFail": "哦！读万级的数就像报名字，先说自己的数，再说姓'万'！比如“三千四百五十六”万！",
+        "weight": 8
+      },
+      {
+        "id": "ln-2-4",
+        "text": "💡 比如 3456,0000，逗号前是万级",
+        "innerActivitiesWhenFail": "看到这个小逗号就知道前面是万级，这个分级的方法真好用！",
+        "weight": 7
+      }
+    ]
+  },
+  {
+    "id": "large-number-3-read-wan",
+    "question": "万级的数怎么读？特别是带0的？",
+    "knowledgePoints": [
+      {
+        "id": "ln-3-1",
+        "text": "🤫 每级末尾的0都不读",
+        "innerActivitiesWhenFail": "原来数末尾的0是“隐身”的，不用读出来！比如4500万，就读四千五百万！",
+        "weight": 10
+      },
+      {
+        "id": "ln-3-2",
+        "text": "1️⃣ 中间有1个或连续几个0，都只读一个“零”",
+        "innerActivitiesWhenFail": "哇，中间的0不管有几个，都只读一次“零”，它们好团结呀！比如4005万，读四千零五万！",
+        "weight": 9
+      },
+      {
+        "id": "ln-3-3",
+        "text": "📖 先读万级，再读个级",
+        "innerActivitiesWhenFail": "读大数就像搭积木，先读万级那块，再读个级那块，连起来就行啦！",
+        "weight": 7
+      },
+      {
+        "id": "ln-3-4",
+        "text": " örneğin 2030,4000 读作“二千零三十万四千”",
+        "innerActivitiesWhenFail": "哦！2030在万级，读“二千零三十”万，4000在个级，读“四千”，连起来就是它！",
+        "weight": 6
+      }
+    ]
+  },
+  {
+    "id": "large-number-4-write-wan",
+    "question": "听到一个大数，怎么写出来？",
+    "knowledgePoints": [
+      {
+        "id": "ln-4-1",
+        "text": "✍️ 先写万级，再写个级",
+        "innerActivitiesWhenFail": "原来写数和读数顺序一样，听到“万”字，就先写万级里的数！",
+        "weight": 10
+      },
+      {
+        "id": "ln-4-2",
+        "text": "👻 哪个数位上没有数，就用0占位",
+        "innerActivitiesWhenFail": "啊哈！原来0是个“占位小精灵”，哪个位置空了它就站过去，不能漏掉！",
+        "weight": 9
+      },
+      {
+        "id": "ln-4-3",
+        "text": "🎯 听到“几千几百几十几万”，就在万级写",
+        "innerActivitiesWhenFail": "抓住了！听到“万”字，就知道前面的数字都是万级大家庭的！",
+        "weight": 8
+      },
+      {
+        "id": "ln-4-4",
+        "text": " örneğin “六百零三万零二十”写作 603,0020",
+        "innerActivitiesWhenFail": "六百零三万就是603在万级，零二十就是0020在个级，原来是这样拼起来的！",
+        "weight": 7
+      }
+    ]
+  },
+  {
+    "id": "large-number-5-yi",
+    "question": "“一亿”有多大呢？",
+    "knowledgePoints": [
+      {
+        "id": "ln-5-1",
+        "text": "🏢 10个一千万是“一亿”",
+        "innerActivitiesWhenFail": "哇！一千万已经那么大了，10个一千万才是一亿！简直是天文数字！",
+        "weight": 10
+      },
+      {
+        "id": "ln-5-2",
+        "text": "🔢 从右边数，第九位是“亿位”",
+        "innerActivitiesWhenFail": "我来数数看，个十百千万...千万后面就是亿位！排在第9个！",
+        "weight": 9
+      },
+      {
+        "id": "ln-5-3",
+        "text": "✍️ “一亿”写作 1,0000,0000，有8个0",
+        "innerActivitiesWhenFail": "天哪，1后面跟着整整8个0！写的时候可不能数错了！",
+        "weight": 8
+      },
+      {
+        "id": "ln-5-4",
+        "text": "🇨🇳 我们国家大约有14亿人",
+        "innerActivitiesWhenFail": "原来我们国家的人口是用“亿”来计算的，亿真的是个非常非常大的数！",
+        "weight": 6
+      }
+    ]
+  },
+  {
+    "id": "large-number-6-yi-level",
+    "question": "比万级还大的“亿级”是什么？",
+    "knowledgePoints": [
+      {
+        "id": "ln-6-1",
+        "text": "🏠 数级有三个家：个级、万级、亿级",
+        "innerActivitiesWhenFail": "原来数字们住在三个大房子里，从右到左是“个级”家，“万级”家，和最大的“亿级”家！",
+        "weight": 10
+      },
+      {
+        "id": "ln-6-2",
+        "text": "👨‍👩‍👧‍👦 亿级也有四成员：亿、十亿、百亿、千亿",
+        "innerActivitiesWhenFail": "亿级也是个四口之家！亿是老大，后面还有十亿、百亿、千亿这些大人物！",
+        "weight": 9
+      },
+      {
+        "id": "ln-6-3",
+        "text": "🗣️ 读完亿级的数，要加上“亿”字",
+        "innerActivitiesWhenFail": "这个我会了！和万级一样，读完亿级的数，要带上它的姓“亿”！",
+        "weight": 8
+      },
+      {
+        "id": "ln-6-4",
+        "text": "💡 比如 5,4321,0000，最左边是亿级",
+        "innerActivitiesWhenFail": "哦！现在有两个逗号了，最左边的就是亿级，中间的是万级！我看懂了！",
+        "weight": 7
+      }
+    ]
+  },
+  {
+    "id": "large-number-7-read-yi",
+    "question": "包含“亿”和“万”的数怎么读？",
+    "knowledgePoints": [
+      {
+        "id": "ln-7-1",
+        "text": "📖 从高到低，一级一级地读",
+        "innerActivitiesWhenFail": "原来就像下楼梯，先读最上面的亿级，再读中间的万级，最后读个级！",
+        "weight": 10
+      },
+      {
+        "id": "ln-7-2",
+        "text": "🤔 读完亿级加“亿”，读完万级加“万”",
+        "innerActivitiesWhenFail": "哈哈，这就像一个口诀，亿级读完喊“亿”，万级读完喊“万”！",
+        "weight": 9
+      },
+      {
+        "id": "ln-7-3",
+        "text": "🤫 万级中间都是0，要读一个“零”",
+        "innerActivitiesWhenFail": "哇，这个要小心！就算万级整个都是0，只要它在亿级和个级中间，就要读一个“零”来连接！比如5亿零45。",
+        "weight": 8
+      },
+      {
+        "id": "ln-7-4",
+        "text": " örneğin 10,4005,3200 读“十亿四千零五万三千二百”",
+        "innerActivitiesWhenFail": "我来拆解一下：10亿，4005万，3200。连起来就是“十亿四千零五万三千二百”，我学会啦！",
+        "weight": 7
+      }
+    ]
+  },
+  {
+    "id": "large-number-8-compare",
+    "question": "怎样比较两个大数的大小？",
+    "knowledgePoints": [
+      {
+        "id": "ln-8-1",
+        "text": "⚖️ 第一步：看位数，位数多的数大",
+        "innerActivitiesWhenFail": "原来是“以多欺少”呀！九位数肯定比八位数大，都不用看具体数字了！",
+        "weight": 10
+      },
+      {
+        "id": "ln-8-2",
+        "text": "🔍 第二步：位数相同，从最高位比起",
+        "innerActivitiesWhenFail": "哦！位数一样多就要从“老大”开始比，谁家老大厉害谁就赢！",
+        "weight": 9
+      },
+      {
+        "id": "ln-8-3",
+        "text": "➡️ 最高位相同，就比下一位，直到比出大小",
+        "innerActivitiesWhenFail": "原来是“车轮战”！老大平手了就比老二，老二再平手就比老三，总能分出胜负！",
+        "weight": 8
+      },
+      {
+        "id": "ln-8-4",
+        "text": "💡 9999万 < 1亿",
+        "innerActivitiesWhenFail": "哇！9999万虽然看起来很大，但是它只有8位数，1亿是9位数，所以1亿更大！",
+        "weight": 6
+      }
+    ]
+  },
+  {
+    "id": "large-number-9-rewrite",
+    "question": "什么是“约等于”？怎么把大数变简单？",
+    "knowledgePoints": [
+      {
+        "id": "ln-9-1",
+        "text": "≈ 这个符号叫“约等号”",
+        "innerActivitiesWhenFail": "原来这两条弯弯的线是“约等号”，表示差不多等于的意思！",
+        "weight": 10
+      },
+      {
+        "id": "ln-9-2",
+        "text": "🎯 “四舍五入”到万位：看千位",
+        "innerActivitiesWhenFail": "我知道了！要不要给万位“进一”，就看它右边的小邻居“千位”够不够5！",
+        "weight": 9
+      },
+      {
+        "id": "ln-9-3",
+        "text": "👍 千位上是5、6、7、8、9，就“入”一个",
+        "innerActivitiesWhenFail": "哦！千位上的数大于等于5，就像个大力士，能把万位“推”大1！",
+        "weight": 8
+      },
+      {
+        "id": "ln-9-4",
+        "text": "👎 千位上是0、1、2、3、4，就“舍”掉",
+        "innerActivitiesWhenFail": "原来千位上的数小于5，力量太小了，后面的尾巴就直接被舍弃变成0啦！",
+        "weight": 7
+      }
+    ]
+  }
+]
