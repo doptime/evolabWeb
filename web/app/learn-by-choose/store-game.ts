@@ -1,7 +1,7 @@
 'use client';
 import { create } from 'zustand';
 import { speak, playSound } from './utils-audio';
-import { Topic, KnowledgePoint, mockTopics,mockTopicsBigNumbers } from './data-mock';
+import mockTopics,{ Topic, KnowledgePoint, mockTopics1 } from './data-mock';
 
 export interface TabOption extends KnowledgePoint {
     ownerTopicId: string;
@@ -94,9 +94,9 @@ export const useGameStore = create<GameState>((set, get) => ({
     fsrsUpdateMessage: null,
 
     initializeGame: async () => {
-        const shuffledTopics = shuffleArray(mockTopicsBigNumbers);
+        const shuffledTopics = shuffleArray(mockTopics);
         set({ 
-            topicList: mockTopicsBigNumbers, 
+            topicList: mockTopics, 
             remainingTopics: shuffledTopics, // 初始化时就设定好本轮游戏的题目顺序
             gameState: 'loading',
             // 重置总分等游戏全局状态
@@ -159,7 +159,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             remainingTopics: newRemainingTopics, // 更新剩余题目列表
         }));
 
-        speak(`请找出 "${targetTopic.question}"`, 'zh-CN');
+        speak(`请找出 ${targetTopic.question}`, 'zh-CN');
     },
 
     selectOption: async (tabIndex, optionId) => {
