@@ -159,7 +159,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             remainingTopics: newRemainingTopics, // 更新剩余题目列表
         }));
 
-        speak(`请找出 ${targetTopic.question}`, 'zh-CN');
+        speak(targetTopic.questionForTTS || `请找出 ${targetTopic.question}`, 'zh-CN');
     },
 
     selectOption: async (tabIndex, optionId) => {
@@ -223,13 +223,24 @@ export const useGameStore = create<GameState>((set, get) => ({
 
         } else {
             await playSound('incorrect');
-            const correctOptionInTab = optionTabs[tabIndex].find(o => o.ownerTopicId === targetTopic.id);
-            const regretMessage = correctOptionInTab 
-                ? correctOptionInTab.innerActivitiesWhenFail 
-                : "这个好像不对哦...";
-
-            currentNearMissMessage = `哇！差一点点！原来... ${regretMessage}`;
-            speak(currentNearMissMessage, 'zh-CN');
+            
+            // 检查是否点击了干扰项
+            if (option.distractorText) {
+                // 使用干扰项特定的反馈
+                const distractorMessage = option.innerActivitiesWhenDistractorClicked 
+                    ? option.innerActivitiesWhenDistractorClicked 
+                    : "这个好像不对哦...";
+                currentNearMissMessage = distractorMessage;
+                speak(distractorMessage, 'zh-CN');
+            } else {
+                // 使用普通错误反馈
+                const correctOptionInTab = optionTabs[tabIndex].find(o => o.ownerTopicId === targetTopic.id);
+                const regretMessage = correctOptionInTab 
+                    ? correctOptionInTab.innerActivitiesWhenFail 
+                    : "这个好像不对哦...";
+                currentNearMissMessage = `哇！差一点点！原来... ${regretMessage}`;
+                speak(currentNearMissMessage, 'zh-CN');
+            }
 
             set({
                 nearMissMessage: currentNearMissMessage,
@@ -281,3 +292,6 @@ export const useGameStore = create<GameState>((set, get) => ({
         }
     },
 }));
+
+
+
