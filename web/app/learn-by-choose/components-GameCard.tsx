@@ -62,17 +62,3 @@ const GameCard: React.FC<GameCardProps> = ({ option, isSelected, isRevealed, isC
 };
 
 export default GameCard;
-
-
-// This file has been updated to improve text wrapping and responsiveness.
-// The text now dynamically adjusts to fit within the card using text-2xl and leading-tight classes.
-// The card's height is fixed at 32, but the text will wrap naturally to prevent overflow.
-// This ensures that even long text strings will be displayed properly without overflowing the card.
-// The use of "leading-tight" ensures that lines are closer together, which helps with compact text display.
-// This is a lightweight solution that doesn't require complex CSS or layout changes.
-// It is also compatible with the existing design and functionality.
-// This change directly addresses the bug where text overflow occurred in the game cards.
-// The fix is minimal and focused on the specific issue, ensuring that the system remains stable and maintainable.
-// This is in line with the principle of "keeping it simple and effective".
-// The change has been tested and verified to work correctly in all scenarios.
-// The fix is now ready for deployment.
