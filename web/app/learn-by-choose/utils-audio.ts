@@ -96,6 +96,8 @@ export const speak = (text: string, lang = 'zh-CN', options: { rate?: number, pi
 
             utterance.onend = () => { currentUtterance = null; resolve(); };
             utterance.onerror = (event) => {
+                // **FIX**: Log the actual error from `event.error`.
+                console.error(`SpeechSynthesis Error for text "${text}":`, event.error);
                 currentUtterance = null; // Clear reference on error.
                 resolve(); // Resolve anyway to not block the game flow.
             };

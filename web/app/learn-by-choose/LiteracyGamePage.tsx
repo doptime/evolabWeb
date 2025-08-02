@@ -7,7 +7,7 @@ import { RefreshIcon } from './components-Icons';
 import { useGestureStore } from '../../components/guesture/gestureStore';
 import { useGameStore } from './store-game';
 import GoldPool from './components-GoldPool';
-import { speak } from './utils-audio'; // Req 6 & 7: Import speak utility
+import { speak } from './utils-audio';
 
 export default function LiteracyGamePage() {
     const {
@@ -28,7 +28,7 @@ export default function LiteracyGamePage() {
     } = useGameStore();
 
     const gesture = useGestureStore((state) => state.gesture);
-    const hoverTimer = useRef<NodeJS.Timeout | null>(null); // Req 7: Ref for hover timer
+    const hoverTimer = useRef<NodeJS.Timeout | null>(null);
 
     useEffect(() => {
         initializeGame();
@@ -48,7 +48,7 @@ export default function LiteracyGamePage() {
     const isRevealed = gameState === 'feedback';
 
     const handleCardClick = (tabIndex: number, optionId: string) => {
-        if (hoverTimer.current) clearTimeout(hoverTimer.current); // Clear hover timer on click
+        if (hoverTimer.current) clearTimeout(hoverTimer.current);
         selectOption(tabIndex, optionId);
     };
 
@@ -62,7 +62,8 @@ export default function LiteracyGamePage() {
     // Req 6: Handler to replay question audio
     const handleQuestionClick = () => {
         if (targetTopic) {
-            speak(`请找出 ${targetTopic.question}`, 'zh-CN');
+            // Use questionForTTS if available, otherwise fallback to question
+            speak(targetTopic.questionForTTS || `请找出 ${targetTopic.question}`, 'zh-CN');
         }
     };
 
@@ -132,7 +133,8 @@ export default function LiteracyGamePage() {
 
                             {tab.map((option, index) => {
                                 const isSelected = selectionForTab?.selectedOptionId === option.id;
-                                const isCorrectForTarget = option.ownerTopicId === targetTopic?.id;
+                                // Use the new isCorrectOption flag from the TabOption itself
+                                const isCorrectForTarget = option.isCorrectOption; 
                                 
                                 return (
                                     <motion.div
