@@ -142,43 +142,39 @@ export const useGameStore = create<GameState>((set, get) => ({
         }
 
         const newOptionTabs: OptionTab[] = [];
-        // Shuffle knowledge points to randomize which one is correct for which tab.
+        // Shuffle knowledge points to randomize the order of the tabs.
         const shuffledKnowledgePoints = shuffleArray([...targetTopic.knowledgePoints]);
 
-        // FIX: Loop through all knowledge points to create a tab for each one.
-        for (const correctOptionForThisTab of shuffledKnowledgePoints) {
-            const currentTabOptions: TabOption[] = [];
-
-            // 1. Add the correct option to the current tab.
-            currentTabOptions.push({
-                ...correctOptionForThisTab,
+        // FIX: Create one tab for each knowledge point, with one correct and one incorrect option.
+        for (const knowledgePoint of shuffledKnowledgePoints) {
+            // 1. Create the CORRECT option from the knowledge point's `text`.
+            const correctOption: TabOption = {
+                ...knowledgePoint,
                 ownerTopicId: targetTopic.id,
                 isCorrectOption: true,
-            });
+            };
 
-            // 2. Use the `distractorText` from the *other* knowledge points as distractors.
-            const potentialDistractorSources = targetTopic.knowledgePoints.filter(
-                kp => kp.id !== correctOptionForThisTab.id
-            );
+            // 2. Create the INCORRECT option (distractor) from the SAME knowledge point's `distractorText`.
+            const incorrectOption: TabOption = {
+                id: `${knowledgePoint.id}-distractor`,
+                text: knowledgePoint.distractorText || `干扰项`,
+                textForTTS: knowledgePoint.distractorTextForTTS || `干扰项`,
+                innerActivitiesWhenFail: '', // Not applicable for distractors
+                distractorText: knowledgePoint.distractorText,
+                distractorTextForTTS: knowledgePoint.distractorTextForTTS,
+                innerActivitiesWhenDistractorClicked: knowledgePoint.innerActivitiesWhenDistractorClicked,
+                weight: 0, // Distractors have no weight
+                ownerTopicId: targetTopic.id,
+                isCorrectOption: false,
+            };
 
-            for (const distractorSourceKP of potentialDistractorSources) {
-                currentTabOptions.push({
-                    id: `${distractorSourceKP.id}-distractor-for-${correctOptionForThisTab.id}`, // Unique ID
-                    text: distractorSourceKP.distractorText || `干扰项`, // Use the distractor text
-                    textForTTS: distractorSourceKP.distractorTextForTTS || `干扰项`,
-                    innerActivitiesWhenFail: '', // Not applicable for distractors
-                    distractorText: distractorSourceKP.distractorText,
-                    distractorTextForTTS: distractorSourceKP.distractorTextForTTS,
-                    innerActivitiesWhenDistractorClicked: distractorSourceKP.innerActivitiesWhenDistractorClicked,
-                    weight: 0, // Distractors have no weight
-                    ownerTopicId: targetTopic.id,
-                    isCorrectOption: false, // This is a distractor
-                });
-            }
-            // 3. Shuffle options within the tab and add to the list of all tabs.
-            newOptionTabs.push(shuffleArray(currentTabOptions));
+            // 3. Shuffle the correct and incorrect options within the tab.
+            const shuffledCurrentTabOptions = shuffleArray([correctOption, incorrectOption]);
+
+            // 4. Add the newly created tab to the list of tabs for the round.
+            newOptionTabs.push(shuffledCurrentTabOptions);
         }
-        
+
         set(state => ({
             targetTopic,
             optionTabs: newOptionTabs,
