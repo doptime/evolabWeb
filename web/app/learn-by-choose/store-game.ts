@@ -4,10 +4,11 @@ import { speak, playSound } from './utils-audio';
 // Explicitly import the default export and types
 import mockTopics, { type Topic, type KnowledgePoint } from './data-mock';
 
-// REFACTOR: This file has been updated to align with the new single-topic-per-round logic.
-// 1. Topic Selection: Topics are now presented sequentially as defined in the data source, following the intended learning path.
-// 2. Option Generation: Each round focuses on one target topic. For each of the topic's knowledge points, a corresponding option tab is created. Each tab contains one correct option (the knowledge point's main text) and distractors generated from the `distractorText` of the *other* knowledge points in the same topic.
-// 3. State Simplification: The 'learningGroup' state has been removed as it's now obsolete.
+// REFACTOR: This file has been updated to align with the new multi-option per topic logic.
+// 1. Topic Selection: Topics are now presented sequentially as defined in the data source.
+// 2. Option Generation: Each round focuses on one target topic. For each of the topic's knowledge points,
+//    create one tab with 4 options: 1 correct and 3 distractors.
+// 3. Randomization: The options within each tab are shuffled randomly.
 
 export interface TabOption extends KnowledgePoint {
     ownerTopicId: string;
@@ -22,7 +23,6 @@ interface Selection {
     isCorrect: boolean;
     rewardAmount: number; // Record the reward for a single selection
 }
-
 
 interface GameState {
     topicList: Topic[];
@@ -142,11 +142,10 @@ export const useGameStore = create<GameState>((set, get) => ({
         }
 
         const newOptionTabs: OptionTab[] = [];
-        // Shuffle knowledge points to randomize the order of the tabs.
-        const shuffledKnowledgePoints = shuffleArray([...targetTopic.knowledgePoints]);
-
-        // FIX: Create one tab for each knowledge point, with one correct and one incorrect option.
-        for (const knowledgePoint of shuffledKnowledgePoints) {
+        // DO NOT shuffle the knowledge points - we need one tab per knowledge point
+        
+        // FOR EACH KNOWLEDGE POINT CREATE A TAB WITH 4 OPTIONS
+        for (const knowledgePoint of targetTopic.knowledgePoints) {
             // 1. Create the CORRECT option from the knowledge point's `text`.
             const correctOption: TabOption = {
                 ...knowledgePoint,
@@ -154,25 +153,28 @@ export const useGameStore = create<GameState>((set, get) => ({
                 isCorrectOption: true,
             };
 
-            // 2. Create the INCORRECT option (distractor) from the SAME knowledge point's `distractorText`.
-            const incorrectOption: TabOption = {
-                id: `${knowledgePoint.id}-distractor`,
-                text: knowledgePoint.distractorText || `干扰项`,
-                textForTTS: knowledgePoint.distractorTextForTTS || `干扰项`,
+            // 2. Create 3 INCORRECT options (distractors) from the OTHER knowledge points' `distractorText`.
+            const otherKPs = targetTopic.knowledgePoints.filter(kp => kp.id !== knowledgePoint.id);
+            const distractors: TabOption[] = otherKPs.map(kp => ({
+                id: `${kp.id}-distractor`,
+                text: kp.distractorText || '干扰项',
+                textForTTS: kp.distractorTextForTTS || '干扰项',
                 innerActivitiesWhenFail: '', // Not applicable for distractors
-                distractorText: knowledgePoint.distractorText,
-                distractorTextForTTS: knowledgePoint.distractorTextForTTS,
-                innerActivitiesWhenDistractorClicked: knowledgePoint.innerActivitiesWhenDistractorClicked,
+                distractorText: kp.distractorText,
+                distractorTextForTTS: kp.distractorTextForTTS,
+                innerActivitiesWhenDistractorClicked: kp.innerActivitiesWhenDistractorClicked,
                 weight: 0, // Distractors have no weight
                 ownerTopicId: targetTopic.id,
                 isCorrectOption: false,
-            };
+            }));
 
-            // 3. Shuffle the correct and incorrect options within the tab.
-            const shuffledCurrentTabOptions = shuffleArray([correctOption, incorrectOption]);
+            // 3. Combine the correct option and 3 distractors into one tab.
+            const tabOptions: TabOption[] = [correctOption, ...distractors];
+            // 4. Shuffle the options within the tab.
+            const shuffledTabOptions = shuffleArray(tabOptions);
 
-            // 4. Add the newly created tab to the list of tabs for the round.
-            newOptionTabs.push(shuffledCurrentTabOptions);
+            // 5. Add the tab to the list of tabs for the round.
+            newOptionTabs.push(shuffledTabOptions);
         }
 
         set(state => ({

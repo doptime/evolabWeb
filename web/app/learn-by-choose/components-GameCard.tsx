@@ -11,7 +11,6 @@ interface GameCardProps {
     isTabCompleted: boolean; // Req 1: Add prop to know if the parent tab is locked
 }
 
-
 const GameCard: React.FC<GameCardProps> = ({ option, isSelected, isRevealed, isCorrectForTarget, isTabCompleted }) => {
     // Req 6: Refined reveal logic.
     // - Incorrect cards flip to show their red "back".
@@ -30,10 +29,10 @@ const GameCard: React.FC<GameCardProps> = ({ option, isSelected, isRevealed, isC
         : 'bg-white border border-gray-200';
 
     // Add dynamic text wrapping and responsive font size
-    const textClass = "text-center text-2xl font-bold text-gray-800 leading-tight";
+    const textClass = "text-center text-lg font-bold text-gray-800 leading-tight p-2";
 
     return (
-        <div className={`w-48 h-32 perspective-1000 ${lockedStyle}`} style={{ zIndex }}>
+        <div className={`w-32 h-24 perspective-1000 ${lockedStyle}`} style={{ zIndex }}>
             <motion.div
                 className="relative w-full h-full text-center transform-style-3d"
                 animate={{
@@ -43,8 +42,8 @@ const GameCard: React.FC<GameCardProps> = ({ option, isSelected, isRevealed, isC
                 transition={{ duration: 0.7, ease: "easeInOut" }}
             >
                 {/* Card Front */}
-                <div className={`absolute top-0 left-0 w-full h-full p-4 backface-hidden rounded-xl ${cardShadow} ${frontStyle} flex flex-col items-center justify-center`}> 
-                    <div className="flex-grow flex items-center justify-center w-full text-2xl font-bold text-gray-800">
+                <div className={`absolute top-0 left-0 w-full h-full p-2 backface-hidden rounded-xl ${cardShadow} ${frontStyle} flex flex-col items-center justify-center`}>
+                    <div className="flex-grow flex items-center justify-center w-full">
                         <span className={textClass}>
                             {option.text}
                         </span>
@@ -52,9 +51,9 @@ const GameCard: React.FC<GameCardProps> = ({ option, isSelected, isRevealed, isC
                 </div>
 
                 {/* Card Back (Only shown for incorrect cards during reveal) */}
-                <div className={`absolute top-0 left-0 w-full h-full p-4 backface-hidden rounded-xl shadow-xl flex flex-col items-center justify-center transform-gpu rotate-y-180 bg-red-100 border-2 border-red-500`}> 
-                    <p className="text-2xl font-bold">{option.text}</p>
-                    <p className="text-red-600 mt-2 text-lg">混淆项</p>
+                <div className={`absolute top-0 left-0 w-full h-full p-2 backface-hidden rounded-xl shadow-xl flex flex-col items-center justify-center transform-gpu rotate-y-180 bg-red-100 border-2 border-red-500`}>
+                    <p className="text-lg font-bold">{option.text}</p>
+                    <p className="text-red-600 mt-2 text-sm">混淆项</p>
                 </div>
             </motion.div>
         </div>

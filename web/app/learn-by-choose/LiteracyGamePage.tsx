@@ -52,7 +52,6 @@ export default function LiteracyGamePage() {
         selectOption(tabIndex, optionId);
     };
 
-
     const handleNextRoundClick = () => {
         if (gameState === 'feedback') {
             startNewRound();
@@ -102,7 +101,7 @@ export default function LiteracyGamePage() {
                     }
                     
                     const tabContainerClasses = `
-                        relative bg-gray-200/50 rounded-2xl p-4 flex flex-wrap items-center justify-center gap-4 
+                        relative bg-gray-200/50 rounded-2xl p-4 flex flex-wrap items-center justify-center 
                         border-2 border-dashed transition-all duration-300
                         ${isTabCompleted ? 'border-gray-400' : 'border-gray-300'}
                         ${glowClass}
@@ -131,38 +130,41 @@ export default function LiteracyGamePage() {
                                 </div>
                             )}
 
-                            {tab.map((option, index) => {
-                                const isSelected = selectionForTab?.selectedOptionId === option.id;
-                                // Use the new isCorrectOption flag from the TabOption itself
-                                const isCorrectForTarget = option.isCorrectOption; 
-                                
-                                return (
-                                    <motion.div
-                                        key={option.id}
-                                        id={`option-${tabIndex}-${option.id}`}
-                                        onClick={() => !isTabCompleted && handleCardClick(tabIndex, option.id)}
-                                        onMouseEnter={() => {
-                                            if (isTabCompleted) return;
-                                            if (hoverTimer.current) clearTimeout(hoverTimer.current);
-                                            hoverTimer.current = setTimeout(() => {
-                                                speak(option.textForTTS, 'zh-CN');
-                                            }, 1000);
-                                        }}
-                                        onMouseLeave={() => {
-                                            if (hoverTimer.current) clearTimeout(hoverTimer.current);
-                                        }}
-                                        className="cursor-pointer"
-                                    >
-                                        <GameCard
-                                            option={option}
-                                            isSelected={isSelected}
-                                            isRevealed={isRevealed}
-                                            isCorrectForTarget={isCorrectForTarget}
-                                            isTabCompleted={isTabCompleted}
-                                        />
-                                    </motion.div>
-                                );
-                            })}
+                            {/* NEW: 2x2 grid layout for 4 options */}
+                            <div className="grid grid-cols-2 gap-4 w-full">
+                                {tab.map((option, index) => {
+                                    const isSelected = selectionForTab?.selectedOptionId === option.id;
+                                    // Use the new isCorrectOption flag from the TabOption itself
+                                    const isCorrectForTarget = option.isCorrectOption; 
+                                    
+                                    return (
+                                        <motion.div
+                                            key={option.id}
+                                            id={`option-${tabIndex}-${option.id}`}
+                                            onClick={() => !isTabCompleted && handleCardClick(tabIndex, option.id)}
+                                            onMouseEnter={() => {
+                                                if (isTabCompleted) return;
+                                                if (hoverTimer.current) clearTimeout(hoverTimer.current);
+                                                hoverTimer.current = setTimeout(() => {
+                                                    speak(option.textForTTS, 'zh-CN');
+                                                }, 1000);
+                                            }}
+                                            onMouseLeave={() => {
+                                                if (hoverTimer.current) clearTimeout(hoverTimer.current);
+                                            }}
+                                            className="cursor-pointer"
+                                        >
+                                            <GameCard
+                                                option={option}
+                                                isSelected={isSelected}
+                                                isRevealed={isRevealed}
+                                                isCorrectForTarget={isCorrectForTarget}
+                                                isTabCompleted={isTabCompleted}
+                                            />
+                                        </motion.div>
+                                    );
+                                })}
+                            </div>
                         </div>
                     );
                 })}
@@ -227,5 +229,4 @@ export default function LiteracyGamePage() {
             </AnimatePresence>
         </div>
     );
-
 }
