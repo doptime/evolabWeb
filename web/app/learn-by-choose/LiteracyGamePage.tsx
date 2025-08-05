@@ -101,7 +101,7 @@ export default function LiteracyGamePage() {
                     }
                     
                     const tabContainerClasses = `
-                        relative bg-gray-200/50 rounded-2xl p-4 flex flex-wrap items-center justify-center 
+                        relative bg-gray-200/50 rounded-2xl p-4 flex flex-col items-center justify-center 
                         border-2 border-dashed transition-all duration-300
                         ${isTabCompleted ? 'border-gray-400' : 'border-gray-300'}
                         ${glowClass}
@@ -130,8 +130,8 @@ export default function LiteracyGamePage() {
                                 </div>
                             )}
 
-                            {/* NEW: 2x2 grid layout for 4 options */}
-                            <div className="grid grid-cols-2 gap-4 w-full">
+                            {/* NEW: 1x2 grid layout for 2 options - changed from grid-cols-2 to flex-col */}
+                            <div className="flex flex-col gap-6 w-full">
                                 {tab.map((option, index) => {
                                     const isSelected = selectionForTab?.selectedOptionId === option.id;
                                     // Use the new isCorrectOption flag from the TabOption itself
