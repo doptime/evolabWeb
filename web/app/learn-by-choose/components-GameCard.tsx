@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { motion } from 'framer-motion';
-import { TabOption } from './store-game';
+import { TabOption } from './store-game.ts';
 
 interface GameCardProps {
     option: TabOption;

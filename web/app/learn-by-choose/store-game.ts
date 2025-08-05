@@ -1,18 +1,11 @@
 'use client';
 import { create } from 'zustand';
 import { speak, playSound } from './utils-audio';
-// Explicitly import the default export and types
 import mockTopics, { type Topic, type KnowledgePoint } from './data-mock';
-
-// REFACTOR: This file has been updated to align with the new multi-option per topic logic.
-// 1. Topic Selection: Topics are now presented sequentially as defined in the data source.
-// 2. Option Generation: Each round focuses on one target topic. For each of the topic's knowledge points,
-//    create one tab with 4 options: 1 correct and 3 distractors.
-// 3. Randomization: The options within each tab are shuffled randomly.
 
 export interface TabOption extends KnowledgePoint {
     ownerTopicId: string;
-    isCorrectOption: boolean; // true if this is the correct answer for the slot, false if it's a distractor
+    isCorrectOption: boolean;
 }
 
 type OptionTab = TabOption[];
@@ -21,12 +14,12 @@ interface Selection {
     tabIndex: number;
     selectedOptionId: string;
     isCorrect: boolean;
-    rewardAmount: number; // Record the reward for a single selection
+    rewardAmount: number;
 }
 
 interface GameState {
     topicList: Topic[];
-    remainingTopics: Topic[]; // Tracks unlearned topics
+    remainingTopics: Topic[];
     targetTopic: Topic | null;
     optionTabs: OptionTab[];
     roundId: number;
@@ -48,7 +41,6 @@ interface GameState {
     fsrsUpdateMessage: string | null;
 }
 
-// Use the robust Fisher-Yates algorithm for true randomization.
 const shuffleArray = <T>(array: T[]): T[] => {
     const newArray = [...array];
     for (let i = newArray.length - 1; i > 0; i--) {
@@ -97,12 +89,10 @@ export const useGameStore = create<GameState>((set, get) => ({
     fsrsUpdateMessage: null,
 
     initializeGame: async () => {
-        // REQ 1: Load topics and set remaining topics in their original order. No shuffling.
         set({
             topicList: mockTopics,
-            remainingTopics: [...mockTopics], // Initialize remaining topics in the defined sequence
+            remainingTopics: [...mockTopics],
             gameState: 'loading',
-            // Reset global game state
             totalGoldCoins: 0,
             roundId: 0,
             easterEggCount: 0,
@@ -142,38 +132,38 @@ export const useGameStore = create<GameState>((set, get) => ({
         }
 
         const newOptionTabs: OptionTab[] = [];
-        // DO NOT shuffle the knowledge points - we need one tab per knowledge point
         
-        // FOR EACH KNOWLEDGE POINT CREATE A TAB WITH 4 OPTIONS
+        // REFACTORED: For each knowledge point, create a tab with ONLY 2 options:
+        // 1. Correct answer (text)
+        // 2. One distractor (distractorText)
         for (const knowledgePoint of targetTopic.knowledgePoints) {
-            // 1. Create the CORRECT option from the knowledge point's `text`.
+            // Create the CORRECT option from the knowledge point's `text`
             const correctOption: TabOption = {
                 ...knowledgePoint,
                 ownerTopicId: targetTopic.id,
                 isCorrectOption: true,
             };
 
-            // 2. Create 3 INCORRECT options (distractors) from the OTHER knowledge points' `distractorText`.
-            const otherKPs = targetTopic.knowledgePoints.filter(kp => kp.id !== knowledgePoint.id);
-            const distractors: TabOption[] = otherKPs.map(kp => ({
-                id: `${kp.id}-distractor`,
-                text: kp.distractorText || '干扰项',
-                textForTTS: kp.distractorTextForTTS || '干扰项',
-                innerActivitiesWhenFail: '', // Not applicable for distractors
-                distractorText: kp.distractorText,
-                distractorTextForTTS: kp.distractorTextForTTS,
-                innerActivitiesWhenDistractorClicked: kp.innerActivitiesWhenDistractorClicked,
+            // Create the INCORRECT option (distractor) from the current knowledge point's own distractorText
+            const distractorOption: TabOption = {
+                id: `${knowledgePoint.id}-distractor`,
+                text: knowledgePoint.distractorText || '干扰项',
+                textForTTS: knowledgePoint.distractorTextForTTS || '干扰项',
+                innerActivitiesWhenFail: '',
+                distractorText: knowledgePoint.distractorText,
+                distractorTextForTTS: knowledgePoint.distractorTextForTTS,
+                innerActivitiesWhenDistractorClicked: knowledgePoint.innerActivitiesWhenDistractorClicked,
                 weight: 0, // Distractors have no weight
                 ownerTopicId: targetTopic.id,
                 isCorrectOption: false,
-            }));
+            };
 
-            // 3. Combine the correct option and 3 distractors into one tab.
-            const tabOptions: TabOption[] = [correctOption, ...distractors];
-            // 4. Shuffle the options within the tab.
+            // Combine the correct option and distractor into one tab
+            const tabOptions: TabOption[] = [correctOption, distractorOption];
+            // No need to shuffle since there are only 2 options
             const shuffledTabOptions = shuffleArray(tabOptions);
 
-            // 5. Add the tab to the list of tabs for the round.
+            // Add the tab to the list of tabs for the round
             newOptionTabs.push(shuffledTabOptions);
         }
 
@@ -182,7 +172,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             optionTabs: newOptionTabs,
             roundId: state.roundId + 1,
             gameState: 'question',
-            remainingTopics: newRemainingTopics, // Update remaining topics list
+            remainingTopics: newRemainingTopics,
         }));
 
         speak(targetTopic.questionForTTS || `请找出 ${targetTopic.question}`, 'zh-CN');
@@ -213,7 +203,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             const gamma = 0.2;
             const k_exploration = 10;
             const explorationFactor = 1 / Math.sqrt(N_user_mock + k_exploration);
-            const chainMultiplier = 1 + 0.1 * (newClickChain -1) ; // chain starts from 1, so multiplier starts from 1.
+            const chainMultiplier = 1 + 0.1 * (newClickChain - 1);
 
             let baseReward = option.weight * (1 + gamma * explorationFactor) * chainMultiplier;
             
@@ -230,13 +220,13 @@ export const useGameStore = create<GameState>((set, get) => ({
                 const critMultiplier = 0.9 + Math.random() * 0.2;
                 rewardEarned = baseReward * critMultiplier;
                 currentRewardMessage = "非常重要！";
-                newConsecutivePerfectHits = 0; // Reset unless it's a perfect hit chain
+                newConsecutivePerfectHits = 0;
             } else {
                 rewardEarned = baseReward;
                 newConsecutivePerfectHits = 0;
             }
 
-            if (get().consecutivePerfectHits >= 2 && newClickCountInRound === 1 && option.weight === maxWeight) { // Chain of perfect hits leads to super crit
+            if (get().consecutivePerfectHits >= 2 && newClickCountInRound === 1 && option.weight === maxWeight) {
                 const superCritMultiplier = 3 + Math.random() * 0.5;
                 rewardEarned = baseReward * superCritMultiplier;
                 currentRewardMessage = "超级暴击！";
@@ -281,7 +271,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             clickChain: newClickChain,
         });
 
-        // FIX: Make round end condition and scoring dynamic based on number of tabs
+        // Round ends when all tabs are completed
         if (newSelections.length === optionTabs.length) {
             set({ gameState: 'feedback' });
 
@@ -308,7 +298,7 @@ export const useGameStore = create<GameState>((set, get) => ({
             }
 
             if (get().superCritsAccumulated >= 2 && Math.random() < 0.5) {
-                set(state => ({ easterEggCount: state.easterEggCount + 1, superCritsAccumulated: 0 })); // Reset after trigger
+                set(state => ({ easterEggCount: state.easterEggCount + 1, superCritsAccumulated: 0 }));
                 speak("嘭！一个巨大的金彩蛋出现了！", 'zh-CN');
             }
         }

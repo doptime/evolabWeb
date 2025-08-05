@@ -1,7 +1,7 @@
 'use client';
 import React, { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useGameStore } from './store-game';
+import { TabOption, useGameStore} from './store-game.ts';
 
 // A reusable sub-component for displaying a single pool
 const Pool = ({ label, amount, maxAmount, height, widthClass, targetId }) => {

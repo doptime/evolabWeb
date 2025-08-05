@@ -5,7 +5,7 @@ import GameCard from './components-GameCard';
 import GestureCursor from './components-GestureCursor';
 import { RefreshIcon } from './components-Icons';
 import { useGestureStore } from '../../components/guesture/gestureStore';
-import { useGameStore } from './store-game';
+import { TabOption, useGameStore } from './store-game.ts';
 import GoldPool from './components-GoldPool';
 import { speak } from './utils-audio';
 

@@ -2,7 +2,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useGestureStore } from '../../components/guesture/gestureStore';
-import { useGameStore } from './store-game';
+import { TabOption , useGameStore} from './store-game.ts';
 
 const GestureCursor = () => {
     const gesture = useGestureStore((state) => state.gesture);
